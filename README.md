@@ -16,24 +16,21 @@ Claude・Copilot などの生成AIを外部の MCP サーバ／API に接続し�
 
 ```mermaid
 flowchart TB
-  subgraph 入力
+  subgraph IN[入力]
+    direction LR
     A[接続先URL / tools/list JSON]
-    Q[質問票<br>提供元の回答]
-    P[規約本文] -. 任意 .-> L[draft-q<br>LLMで質問票下書き]
+    P[規約本文] -. 任意 .-> L[draft-q<br>LLMで下書き] -.-> Q[質問票<br>提供元の回答]
   end
-  subgraph 審査
-    B[証拠収集<br>tools/list・RFC 9728・RFC 8414] --> C[MCP固有5脅威チェック]
-    C --> D[ルーブリック7項目<br>ASI番号に紐づけ]
-    D --> R[審査レポート<br>許可／条件付き／不可]
+  subgraph AUD[審査]
+    direction LR
+    B[証拠収集<br>tools/list・OAuthメタデータ] --> C[MCP固有<br>5脅威チェック] --> D[ルーブリック<br>7項目] --> R[審査レポート<br>許可／条件付き／不可]
   end
-  subgraph 承認後
-    PIN[pin<br>定義をハッシュ固定] --> M[monitor<br>定期比較]
-    M -->|差分あり| RE[再審査]
+  subgraph AFTER[承認後]
+    direction LR
+    PIN[pin<br>定義をハッシュ固定] --> M[monitor<br>定期比較] -->|差分あり| RE[再審査]
   end
-  A --> B
-  L -.-> Q
-  Q --> D
-  R -->|承認| PIN
+  IN --> AUD
+  AUD -->|承認| AFTER
 ```
 
 ### MCP固有の5脅威
