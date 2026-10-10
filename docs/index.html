@@ -127,12 +127,12 @@ details.more textarea{margin-top:8px;min-height:70px}
   <header>
     <h1>MCP接続先の審査</h1>
     <p class="lede">生成AIを社外のMCPサーバにつなぐ前に、ツール定義と提供元の回答から、許可・条件付き許可・不可を判定します。</p>
-    <p class="privacy">入力したJSONはこのブラウザの中だけで処理され、どこにも送信されません。審査対象のサーバにもアクセスしません。外部との通信は、解析エンジン（Pyodide）と文字フォントの読み込みだけです。</p>
+    <p class="privacy">入力した内容はこのブラウザの中だけで処理され、どこにも送信されません。審査対象のサーバにもアクセスしません。外部との通信は、解析エンジン（Pyodide）と文字フォントの読み込みだけです。</p>
   </header>
 
   <div class="layout">
     <section aria-labelledby="in-h">
-      <h2 id="in-h">提出書類</h2>
+      <h2 id="in-h">入力情報</h2>
       <ol class="howto">
         <li>接続先のツール名と説明文を貼る</li>
         <li>分かる範囲で質問票に答える（分からない項目は空欄のままでよい）</li>
@@ -208,7 +208,12 @@ details.more textarea{margin-top:8px;min-height:70px}
     <section aria-labelledby="out-h">
       <h2 id="out-h">審査票</h2>
       <div class="sheet" id="sheet">
-        <p class="empty">左でツール定義を入れて「審査する」を押すと、ここに判定が出ます。まずは「例：汚染された定義」で試せます。</p>
+        <p class="empty">左でツール名と説明文を入れて「審査する」を押すと、ここに判定が出ます。</p>
+        <p class="empty" style="margin-top:12px">まず動きを見たいときは、ここから試せます。</p>
+        <div class="row">
+          <button type="button" class="try" data-try="poisoned">汚染された定義を審査してみる</button>
+          <button type="button" class="try" data-try="clean">問題のない定義を審査してみる</button>
+        </div>
       </div>
     </section>
   </div>
@@ -455,6 +460,12 @@ details.more textarea{margin-top:8px;min-height:70px}
   }
 
   // ---------- 審査 ----------
+  document.querySelectorAll("button[data-try]").forEach((b) => b.addEventListener("click", () => {
+    if (!web) { showErr("解析エンジンの準備ができるまでお待ちください。"); return; }
+    setSnap(SAMPLES[b.dataset.try]); setForm(SAMPLES.questionnaire);
+    inventory = [{ name: "corp-mail.json", text: pretty(SAMPLES.inventory) }]; renderInv();
+    $("run").click();
+  }));
   $("run").addEventListener("click", () => {
     $("err").hidden = true;
     const tools = snap.tools.filter((t) => (t.name || "").trim() || (t.description || "").trim());
