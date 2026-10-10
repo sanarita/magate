@@ -1,13 +1,14 @@
 # mcp-gate — MCP接続先セキュリティ審査エージェント
+
 **▶ ブラウザで試す：https://sanarita.github.io/mcp-gate/** （インストール不要・入力は外部に送信されません）
 
 関連ツール：[IPI Guard Chat](https://github.com/sanarita/ipi-guard-chat)（文書の検査）／[skillscan](https://github.com/sanarita/skillscan)（スキルの検査）
 
 Claude・Copilot などの生成AIを外部の MCP サーバ／API に接続してよいかを審査し、
-**「許可／条件付き許可／不可」** の3段階で判定して、課長・部長にそのまま渡せる日本語レポートを出力します。
+**「許可／条件付き許可／不可」** の3段階で判定して、意思決定者にそのまま渡せる日本語レポートを出力します。
 承認後はツール定義をハッシュで固定し、定期監視で「承認後の差し替え（ラグプル）」を検知します。
 
-- Python 標準ライブラリのみ（追加インストール不要）
+- Python 標準ライブラリのみ（追加インストール不要）、自動テスト32件
 - 対象サーバのツールは**一度も実行しない**（取得するのは `tools/list` と OAuth メタデータだけ）
 - IPI Guard / skillscan と同じ「パターン採点＋外部抽出器の差し込み口」設計
 
@@ -54,8 +55,7 @@ flowchart LR
 ## 使い方
 
 ```powershell
-# 個人PC（uv 環境）での例
-cd C:\Users\USER\dev\mcp-gate
+# リポジトリのフォルダで実行（uv を使わない場合は uv run を外して python で実行）
 uv run python -m mcpgate audit --snapshot samples\patent_clean.json -q samples\questionnaire_patent.json --inventory samples\inventory -o out\report.md
 ```
 
@@ -95,11 +95,7 @@ uv run python -m mcpgate audit --snapshot samples\patent_clean.json -q samples\q
 - 外部との通信は、解析エンジン Pyodide（cdn.jsdelivr.net）と Google Fonts の読み込みだけです。
 - 審査ロジックはCLIと同じPythonコードを埋め込んで動かしています。通信を伴うモジュール（collect / cli / mcp_server / policy_agent）は含めていません。
 
-### 公開手順
-
-1. このリポジトリを GitHub に push する
-2. リポジトリの Settings → Pages で、Source を「Deploy from a branch」、Branch を `main` の `/docs` にする
-3. 数分後に `https://<ユーザー名>.github.io/mcp-gate/` で開ける
+公開URL：https://sanarita.github.io/mcp-gate/ （フォークして使う場合は Settings → Pages で `main` の `/docs` を指定）
 
 ### コードを変更したら
 
