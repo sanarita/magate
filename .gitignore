@@ -5,3 +5,7 @@ out/
 # トークンや回答原本を誤ってコミットしない
 *.secret.json
 .env
+
+*.egg-info/
+
+*.egg-info/
