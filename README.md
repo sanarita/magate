@@ -1,4 +1,7 @@
 # mcp-gate — MCP接続先セキュリティ審査エージェント
+**▶ ブラウザで試す：https://sanarita.github.io/mcp-gate/** （インストール不要・入力は外部に送信されません）
+
+関連ツール：[IPI Guard Chat](https://github.com/sanarita/ipi-guard-chat)（文書の検査）／[skillscan](https://github.com/sanarita/skillscan)（スキルの検査）
 
 Claude・Copilot などの生成AIを外部の MCP サーバ／API に接続してよいかを審査し、
 **「許可／条件付き許可／不可」** の3段階で判定して、課長・部長にそのまま渡せる日本語レポートを出力します。
@@ -73,7 +76,7 @@ uv run python -m mcpgate audit --snapshot samples\patent_clean.json -q samples\q
 1. `samples/questionnaire_template.json` をコピーし、提供元への質問票として回答を集める（規約があれば `draft-q` で下書き）
 2. `audit` でレポートを作り、条件付きなら条件を満たしてから再度 `audit`
 3. 承認したら `pin` で固定し、`pins/` をリポジトリにコミット
-4. `.github/workflows/mcp-monitor.yml` または Windows タスクスケジューラで `monitor` を定期実行。差分が出たら再審査
+4. `examples/mcp-monitor.yml` を `.github/workflows/` に置くか、Windows タスクスケジューラで `monitor` を定期実行。差分が出たら再審査
 
 ### サンプル
 
