@@ -44,7 +44,7 @@ def build(repo: str, out: str) -> str:
     sources = {m: _read(m) for m in MODULES}
     with tempfile.TemporaryDirectory() as d:
         clean = _json("samples/patent_clean.json")
-        with open(save_pin(d, clean, approved_by="IT4課（例）", note="サンプル"), encoding="utf-8") as f:
+        with open(save_pin(d, clean, approved_by="情報システム部（例）", note="サンプル"), encoding="utf-8") as f:
             pin = json.load(f)
     samples = {
         "clean": _json("samples/patent_clean.json"),

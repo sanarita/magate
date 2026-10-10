@@ -95,6 +95,30 @@ pre{margin:6px 0 0;padding:10px;background:var(--paper);border-radius:4px;font:1
 .note{font-size:12.5px;color:var(--muted);margin:8px 0 0}
 footer{margin-top:40px;font-size:12.5px;color:var(--muted);max-width:72ch}
 footer a{color:var(--ai)}
+.howto{margin:0 0 6px;padding-left:1.4em;font-size:14px}
+.howto li{margin:1px 0}
+label{display:block;font-size:13px;color:var(--muted)}
+input[type=text],input[type=url],input[type=number],select{display:block;width:100%;margin-top:3px;font:14px/1.4 var(--sans);color:var(--ink);
+  background:var(--surface);border:1px solid var(--rule);border-radius:4px;padding:7px 9px}
+input:focus-visible,select:focus-visible{outline:2px solid var(--focus);outline-offset:1px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px}
+@media (max-width:520px){.grid2{grid-template-columns:1fr}}
+.tool{border:1px solid var(--rule);border-radius:4px;padding:10px;margin:8px 0;background:var(--surface)}
+.tool-head{display:flex;gap:8px;align-items:end}
+.tool-head label{flex:1}
+.tool textarea{min-height:70px;font-family:var(--sans);font-size:13.5px;margin-top:3px}
+.tool .tag{font-size:12px;color:var(--muted);margin:6px 0 0}
+.del{padding:7px 10px;color:var(--muted)}
+details.more{margin-top:12px;border-top:1px dashed var(--rule);padding-top:4px}
+details.more textarea{margin-top:8px;min-height:70px}
+.qsec{border-top:1px solid var(--rule)}
+.qsec:first-child{border-top:0}
+.qsec summary{display:flex;justify-content:space-between;gap:8px;padding:9px 0;font-weight:500;font-size:14px}
+.qsec summary .cnt{font-weight:400;font-size:12.5px;color:var(--muted)}
+.qbody{display:grid;gap:10px;padding:2px 0 14px}
+.check{display:flex;gap:8px;align-items:flex-start;color:var(--ink);font-size:13.5px}
+.check input{margin-top:4px}
+.hint{font-size:12px;color:var(--muted);margin-top:2px}
 .sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
 </style>
 </head>
@@ -109,36 +133,54 @@ footer a{color:var(--ai)}
   <div class="layout">
     <section aria-labelledby="in-h">
       <h2 id="in-h">提出書類</h2>
+      <ol class="howto">
+        <li>接続先のツール名と説明文を貼る</li>
+        <li>分かる範囲で質問票に答える（分からない項目は空欄のままでよい）</li>
+        <li>「審査する」を押す</li>
+      </ol>
 
       <div class="slot">
-        <div class="slot-head"><p class="slot-title">ツール定義</p><span class="req">必須</span></div>
-        <p class="help">接続先の tools/list の結果（JSON）。提供元から受け取るか、mcp-gate snapshot で取得したもの。</p>
-        <label class="sr" for="snap">ツール定義のJSON</label>
-        <textarea id="snap" spellcheck="false" placeholder='{"tools":[{"name":"...","description":"..."}]}'></textarea>
-        <div class="row">
-          <label class="filebtn">ファイルを選ぶ<input type="file" accept=".json,application/json" data-target="snap"></label>
-          <button type="button" data-sample="clean" data-target="snap">例：問題なし</button>
-          <button type="button" data-sample="poisoned" data-target="snap">例：汚染された定義</button>
-          <button type="button" data-sample="rugpull" data-target="snap">例：承認後に差し替え</button>
+        <div class="slot-head"><p class="slot-title">1. 接続先のツール</p><span class="req">必須</span></div>
+        <p class="help">提供元の資料やWebページに載っている、ツールの名前と説明文をそのまま貼り付けます。</p>
+        <div class="grid2">
+          <label>接続先の名前<input id="srv-name" type="text" placeholder="例：特許検索サービス" autocomplete="off"></label>
+          <label>URL（任意）<input id="srv-url" type="url" placeholder="https://…" autocomplete="off"></label>
         </div>
-        <p class="loaded" id="snap-info" aria-live="polite"></p>
+        <div id="tools"></div>
+        <div class="row">
+          <button type="button" id="add-tool">＋ ツールを追加</button>
+          <button type="button" id="clear-tools">すべて消す</button>
+        </div>
+        <details class="more">
+          <summary>JSONファイルがある場合・サンプルで試す</summary>
+          <p class="help">提供元から tools/list のJSONを受け取っている場合は、こちらから読み込むと引数の説明まで検査できます。</p>
+          <div class="row">
+            <label class="filebtn">JSONファイルを選ぶ<input type="file" accept=".json,application/json" id="snap-file"></label>
+            <button type="button" data-sample="clean">例：問題なし</button>
+            <button type="button" data-sample="poisoned">例：汚染された定義</button>
+            <button type="button" data-sample="rugpull">例：承認後に差し替え</button>
+          </div>
+          <label class="sr" for="snap-json">JSONを貼り付け</label>
+          <textarea id="snap-json" spellcheck="false" placeholder="ここにJSONを貼り付けて「読み込む」"></textarea>
+          <div class="row"><button type="button" id="snap-load">貼り付けたJSONを読み込む</button></div>
+        </details>
       </div>
 
       <div class="slot">
-        <div class="slot-head"><p class="slot-title">質問票（提供元の回答）</p><span class="opt">任意</span></div>
-        <p class="help">運営主体・認証・データ保持・地域・監査ログの回答。空欄の項目は「未確認」になります。</p>
-        <label class="sr" for="q">質問票のJSON</label>
-        <textarea id="q" spellcheck="false"></textarea>
+        <div class="slot-head"><p class="slot-title">2. 質問票（提供元への確認）</p><span class="opt">任意</span></div>
+        <p class="help">空欄の項目は「未確認」として、許可の条件に挙がります。</p>
+        <div id="qform"></div>
         <div class="row">
-          <label class="filebtn">ファイルを選ぶ<input type="file" accept=".json,application/json" data-target="q"></label>
-          <button type="button" data-sample="questionnaire" data-target="q">記入例を入れる</button>
-          <button type="button" id="dl-template">空の質問票をダウンロード</button>
+          <button type="button" id="q-example">記入例を入れる</button>
+          <button type="button" id="q-clear">空にする</button>
+          <button type="button" id="q-save">回答を保存（.json）</button>
+          <label class="filebtn">保存した回答を開く<input type="file" accept=".json,application/json" id="q-file"></label>
         </div>
       </div>
 
       <div class="slot">
-        <div class="slot-head"><p class="slot-title">承認済みサーバの定義</p><span class="opt">任意・複数可</span></div>
-        <p class="help">すでに使っている他のMCPサーバの定義。名前の衝突や乗っ取り（シャドーイング）の照合に使います。</p>
+        <div class="slot-head"><p class="slot-title">3. すでに使っている接続先</p><span class="opt">任意・複数可</span></div>
+        <p class="help">他の接続先のツールを乗っ取る記述がないか照合します。過去にこの画面で保存した「承認用の固定ハッシュ」や、tools/list のJSONを選びます。</p>
         <div class="row">
           <label class="filebtn">ファイルを選ぶ<input type="file" accept=".json,application/json" multiple id="inv-file"></label>
           <button type="button" id="inv-sample">例：社内メールサーバ</button>
@@ -148,14 +190,14 @@ footer a{color:var(--ai)}
       </div>
 
       <div class="slot">
-        <div class="slot-head"><p class="slot-title">承認時の固定ハッシュ</p><span class="opt">任意</span></div>
-        <p class="help">承認時に保存した .pin.json。指定すると、承認後に定義が書き換えられていないか（ラグプル）を照合します。</p>
-        <label class="sr" for="pin">固定ハッシュのJSON</label>
-        <textarea id="pin" spellcheck="false"></textarea>
+        <div class="slot-head"><p class="slot-title">4. 承認したときの記録</p><span class="opt">任意</span></div>
+        <p class="help">承認時に保存した固定ハッシュ（.pin.json）を選ぶと、承認後に定義が書き換えられていないかを照合します。</p>
         <div class="row">
-          <label class="filebtn">ファイルを選ぶ<input type="file" accept=".json,application/json" data-target="pin"></label>
-          <button type="button" data-sample="pin" data-target="pin">例：承認時の定義</button>
+          <label class="filebtn">ファイルを選ぶ<input type="file" accept=".json,application/json" id="pin-file"></label>
+          <button type="button" id="pin-sample">例：承認時の定義</button>
+          <button type="button" id="pin-clear">クリア</button>
         </div>
+        <p class="loaded" id="pin-info" aria-live="polite">未指定</p>
       </div>
 
       <button type="button" class="run" id="run" disabled>審査する</button>
@@ -189,7 +231,6 @@ footer a{color:var(--ai)}
   const MARK = { OK: "○ 適合", WARN: "△ 要対応", FAIL: "× 不適合", UNKNOWN: "？ 未確認" };
   const THREATS = { tool_poisoning: "ツールポイズニング", rug_pull: "ラグプル", shadowing: "シャドーイング",
                     confused_deputy: "トークン中継", oauth_scope: "過剰なスコープ" };
-  let inventory = [];
   let web = null;
   let last = null;
 
@@ -211,28 +252,175 @@ footer a{color:var(--ai)}
     }
   })();
 
-  // ---------- 入力 ----------
+  // ---------- 1. 接続先のツール ----------
   const pretty = (o) => JSON.stringify(o, null, 2);
-  function infoSnap() {
-    const el = $("snap-info");
-    try {
-      const o = JSON.parse($("snap").value);
-      const tools = (o.result || o).tools || [];
-      el.textContent = `${(o.server && o.server.name) || "名称未設定"}：ツール ${tools.length} 件`;
-    } catch { el.textContent = $("snap").value.trim() ? "JSONとして読めません" : ""; }
-  }
-  $("snap").addEventListener("input", infoSnap);
+  const clone = (o) => JSON.parse(JSON.stringify(o));
+  let snap = null;   // 審査に渡すツール定義（説明文以外の情報も保持する）
 
-  document.querySelectorAll("button[data-sample]").forEach((b) => b.addEventListener("click", () => {
-    $(b.dataset.target).value = pretty(SAMPLES[b.dataset.sample]);
-    if (b.dataset.target === "snap") infoSnap();
-  }));
-  document.querySelectorAll('input[type=file][data-target]').forEach((inp) => inp.addEventListener("change", async () => {
-    if (!inp.files[0]) return;
-    $(inp.dataset.target).value = await inp.files[0].text();
-    if (inp.dataset.target === "snap") infoSnap();
-    inp.value = "";
-  }));
+  function setSnap(obj) {
+    if (obj && obj.result && obj.result.tools) obj = obj.result;
+    if (!obj || !Array.isArray(obj.tools)) throw new Error("tools の一覧が見つかりません。tools/list の結果のJSONか確認してください。");
+    snap = clone(obj);
+    snap.server = snap.server || {};
+    $("srv-name").value = snap.server.name || "";
+    $("srv-url").value = snap.server.url || "";
+    if (!snap.tools.length) snap.tools.push({ name: "", description: "" });
+    renderTools();
+  }
+  function blank() { setSnap({ server: {}, tools: [{ name: "", description: "" }] }); }
+
+  function renderTools() {
+    const box = $("tools"); box.replaceChildren();
+    snap.tools.forEach((t, i) => {
+      const name = el("input", { type: "text", placeholder: "例：search_patents", autocomplete: "off" });
+      name.value = t.name || "";
+      name.addEventListener("input", () => { t.name = name.value.trim(); });
+      const desc = el("textarea", { spellcheck: "false", placeholder: "ツールの説明文をそのまま貼り付け" });
+      desc.value = t.description || "";
+      desc.addEventListener("input", () => { t.description = desc.value; });
+      const del = el("button", { type: "button", class: "del", "aria-label": `ツール${i + 1}を削除` }, "削除");
+      del.addEventListener("click", () => { snap.tools.splice(i, 1); if (!snap.tools.length) snap.tools.push({ name: "", description: "" }); renderTools(); });
+      const card = el("div", { class: "tool" },
+        el("div", { class: "tool-head" }, el("label", {}, `ツール名（${i + 1}）`, name), del),
+        el("label", {}, "説明文", desc));
+      const props = Object.keys(((t.inputSchema || {}).properties) || {});
+      if (props.length) card.append(el("p", { class: "tag" }, `引数 ${props.length} 個の定義も読み込み済み（引数の説明文も検査します）`));
+      box.append(card);
+    });
+  }
+  $("srv-name").addEventListener("input", () => { snap.server.name = $("srv-name").value.trim(); });
+  $("srv-url").addEventListener("input", () => { snap.server.url = $("srv-url").value.trim(); });
+  $("add-tool").addEventListener("click", () => { snap.tools.push({ name: "", description: "" }); renderTools(); $("tools").lastChild.querySelector("input").focus(); });
+  $("clear-tools").addEventListener("click", blank);
+  document.querySelectorAll("button[data-sample]").forEach((b) => b.addEventListener("click", () => setSnap(SAMPLES[b.dataset.sample])));
+  function loadSnapText(text) {
+    try { setSnap(JSON.parse(text)); $("err").hidden = true; }
+    catch (e) { showErr("JSONを読み込めませんでした：" + e.message); }
+  }
+  $("snap-file").addEventListener("change", async (ev) => { if (ev.target.files[0]) loadSnapText(await ev.target.files[0].text()); ev.target.value = ""; });
+  $("snap-load").addEventListener("click", () => loadSnapText($("snap-json").value));
+
+  // ---------- 2. 質問票（フォーム → JSON を自動生成）----------
+  const TRI = [["", "不明・未回答"], ["yes", "はい"], ["no", "いいえ"]];
+  const CLS = [["", "未定"], ["public", "公開情報"], ["internal", "社内限"], ["confidential", "社外秘"], ["secret", "極秘"]];
+  const QFORM = [
+    { title: "運営主体", fields: [
+      { k: "operator.name", label: "運営会社名", type: "text" },
+      { k: "operator.corporate_number", label: "法人番号（13桁）", type: "text", hint: "国税庁の法人番号公表サイトで調べられます" },
+      { k: "operator.domain", label: "運営会社のドメイン", type: "text", ph: "例：example.co.jp" },
+      { k: "operator.security_contact", label: "セキュリティの問い合わせ窓口", type: "text" },
+      { k: "operator.certifications", label: "第三者認証", type: "list", ph: "例：ISMS, SOC 2（カンマ区切り）" },
+      { k: "operator.verified_by_human", label: "法人番号公表サイト等で、会社の実在を自分で確認した", type: "check" },
+    ]},
+    { title: "認証", fields: [
+      { k: "auth.method", label: "ログインの方式", type: "select", opts: [["", "不明"], ["oauth2.1", "OAuth（ユーザーごとにログイン）"], ["api_key", "APIキー"], ["none", "認証なし"]] },
+      { k: "auth.token_passthrough", label: "受け取ったトークンを、別のAPIへそのまま渡すか", type: "tri", hint: "「はい」は危険な実装です" },
+      { k: "auth.audience_validation", label: "自分宛てに発行されたトークンだけを受け付けるか", type: "tri" },
+      { k: "auth.is_proxy", label: "第三者のAPIを代わりに呼び出す中継型のサーバである", type: "check" },
+      { k: "auth.per_client_consent", label: "中継型の場合、利用者ごとに同意を取るか", type: "tri" },
+      { k: "auth.requested_scopes", label: "要求される権限（スコープ）", type: "list", ph: "例：patents.read" },
+      { k: "auth.needed_scopes", label: "業務で本当に必要な権限", type: "list", ph: "例：patents.read" },
+    ]},
+    { title: "送るデータ", fields: [
+      { k: "data.max_classification_sent", label: "送るデータのうち、最も機密度の高いもの", type: "select", opts: CLS },
+      { k: "data.allowed_classification", label: "この接続先に送ってよい上限", type: "select", opts: CLS, def: "internal" },
+      { k: "data.read_only_intended", label: "参照（読み取り）だけに使う", type: "check", def: true },
+    ]},
+    { title: "データの保存・学習利用", fields: [
+      { k: "retention.used_for_training", label: "送ったデータがAIの学習に使われるか", type: "tri" },
+      { k: "retention.retention_days", label: "データの保存期間（日）", type: "number" },
+      { k: "retention.deletion_on_request", label: "削除を依頼したら応じるか", type: "tri" },
+      { k: "retention.source_url", label: "根拠にした規約のURL", type: "text" },
+      { k: "policy.max_retention_days", label: "社内で許す保存期間の上限（日）", type: "number", def: 30 },
+    ]},
+    { title: "処理する国・地域", fields: [
+      { k: "hosting.regions", label: "データを処理する国", type: "list", ph: "例：JP, US", hint: "国コードで入力（日本=JP、米国=US）" },
+      { k: "hosting.allowed_regions", label: "社内で許可している国", type: "list", def: ["JP"] },
+      { k: "hosting.subprocessors_disclosed", label: "再委託先（下請けのクラウド等）が公開されているか", type: "tri" },
+    ]},
+    { title: "記録（監査ログ）", fields: [
+      { k: "audit.client_side_logging", label: "自社側（ゲートウェイ等）でAIの呼び出しを記録しているか", type: "tri" },
+      { k: "audit.server_side_audit_log", label: "提供元が利用の記録を残すか", type: "tri" },
+      { k: "audit.log_export_available", label: "その記録を自社で受け取れるか", type: "tri" },
+    ]},
+  ];
+  const inputs = {};
+  function buildForm() {
+    const root = $("qform");
+    for (const sec of QFORM) {
+      const cnt = el("span", { class: "cnt" });
+      const body = el("div", { class: "qbody" });
+      for (const f of sec.fields) {
+        let inp;
+        if (f.type === "check") {
+          inp = el("input", { type: "checkbox" });
+          body.append(el("label", { class: "check" }, inp, f.label));
+        } else {
+          if (f.type === "tri" || f.type === "select") {
+            inp = el("select", {}, ...(f.type === "tri" ? TRI : f.opts).map(([v, t]) => el("option", { value: v }, t)));
+          } else {
+            inp = el("input", { type: f.type === "number" ? "number" : "text", autocomplete: "off", ...(f.ph ? { placeholder: f.ph } : {}), ...(f.type === "number" ? { min: "0" } : {}) });
+          }
+          const lab = el("label", {}, f.label, inp);
+          if (f.hint) lab.append(el("span", { class: "hint", style: "display:block" }, f.hint));
+          body.append(lab);
+        }
+        inp.addEventListener("input", updateCounts); inp.addEventListener("change", updateCounts);
+        inputs[f.k] = { f, inp, cnt };
+      }
+      root.append(el("details", { class: "qsec" }, el("summary", {}, sec.title, cnt), body));
+    }
+    setForm({});
+  }
+  function getVal({ f, inp }) {
+    if (f.type === "check") return inp.checked;
+    const v = inp.value.trim();
+    if (f.type === "tri") return v === "yes" ? true : v === "no" ? false : null;
+    if (f.type === "number") return v === "" ? null : Math.max(0, parseInt(v, 10));
+    if (f.type === "list") return v ? v.split(/[,、\s]+/).filter(Boolean) : [];
+    return v === "" ? null : v;
+  }
+  function setVal({ f, inp }, v) {
+    if (v === undefined) v = f.def !== undefined ? f.def : null;
+    if (f.type === "check") inp.checked = !!v;
+    else if (f.type === "tri") inp.value = v === true ? "yes" : v === false ? "no" : "";
+    else if (f.type === "list") inp.value = Array.isArray(v) ? v.join(", ") : (v || "");
+    else inp.value = v === null ? "" : String(v);
+  }
+  function getForm() {
+    const q = {};
+    for (const [k, x] of Object.entries(inputs)) {
+      const [sec, key] = k.split(".");
+      (q[sec] = q[sec] || {})[key] = getVal(x);
+    }
+    return q;
+  }
+  function setForm(q) {
+    for (const [k, x] of Object.entries(inputs)) {
+      const [sec, key] = k.split(".");
+      setVal(x, q[sec] ? q[sec][key] : undefined);
+    }
+    updateCounts();
+  }
+  function updateCounts() {
+    const by = new Map();
+    for (const x of Object.values(inputs)) {
+      const v = getVal(x), filled = x.f.type === "check" ? v : Array.isArray(v) ? v.length > 0 : v !== null;
+      const c = by.get(x.cnt) || [0, 0]; c[1]++; if (filled) c[0]++; by.set(x.cnt, c);
+    }
+    for (const [cnt, [n, m]] of by) cnt.textContent = `${n}／${m} 記入`;
+  }
+  $("q-example").addEventListener("click", () => setForm(SAMPLES.questionnaire));
+  $("q-clear").addEventListener("click", () => setForm({}));
+  $("q-save").addEventListener("click", () => download("questionnaire.json", pretty(getForm())));
+  $("q-file").addEventListener("change", async (ev) => {
+    const f = ev.target.files[0]; ev.target.value = "";
+    if (!f) return;
+    try { setForm(JSON.parse(await f.text())); $("err").hidden = true; } catch (e) { showErr("回答ファイルを読み込めませんでした：" + e.message); }
+  });
+
+  // ---------- 3. すでに使っている接続先 ／ 4. 承認時の記録 ----------
+  let inventory = [];
   function renderInv() {
     $("inv-info").textContent = inventory.length ? inventory.map((x) => x.name).join("、") + `（${inventory.length} 件）` : "未指定";
   }
@@ -246,19 +434,35 @@ footer a{color:var(--ai)}
   });
   $("inv-clear").addEventListener("click", () => { inventory = []; renderInv(); });
 
+  let pinText = "";
+  function setPin(text, name) {
+    pinText = text;
+    if (!text) { $("pin-info").textContent = "未指定"; return; }
+    try {
+      const p = JSON.parse(text);
+      $("pin-info").textContent = `${name}（${(p.server && p.server.name) || "名称不明"}、ツール ${(p.tools || []).length} 件${p.approved_by ? "、承認者：" + p.approved_by : ""}）`;
+    } catch { $("pin-info").textContent = `${name}（JSONとして読めません）`; }
+  }
+  $("pin-file").addEventListener("change", async (ev) => { const f = ev.target.files[0]; if (f) setPin(await f.text(), f.name); ev.target.value = ""; });
+  $("pin-sample").addEventListener("click", () => setPin(pretty(SAMPLES.pin), "例：承認時の定義"));
+  $("pin-clear").addEventListener("click", () => setPin("", ""));
+
   function download(name, text, type = "application/json") {
     const a = document.createElement("a");
     a.href = URL.createObjectURL(new Blob([text], { type: type + ";charset=utf-8" }));
     a.download = name; document.body.appendChild(a); a.click();
     setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 0);
   }
-  $("dl-template").addEventListener("click", () => download("questionnaire.json", pretty(SAMPLES.template)));
 
   // ---------- 審査 ----------
   $("run").addEventListener("click", () => {
     $("err").hidden = true;
-    if (!$("snap").value.trim()) { showErr("ツール定義を入れてください。"); return; }
-    const out = JSON.parse(web.run_json($("snap").value, $("q").value, JSON.stringify(inventory.map((x) => x.text)), $("pin").value));
+    const tools = snap.tools.filter((t) => (t.name || "").trim() || (t.description || "").trim());
+    if (!tools.length) { showErr("ツール名と説明文を1つ以上入れてください。"); return; }
+    const missing = tools.findIndex((t) => !(t.name || "").trim());
+    if (missing >= 0) { showErr(`ツール${missing + 1}の名前が空欄です。`); return; }
+    const s = { ...snap, tools, server: { ...snap.server, name: snap.server.name || "名称未設定" } };
+    const out = JSON.parse(web.run_json(JSON.stringify(s), JSON.stringify(getForm()), JSON.stringify(inventory.map((x) => x.text)), pinText));
     if (!out.ok) { showErr(out.error); return; }
     last = out; render(out);
   });
@@ -326,6 +530,7 @@ footer a{color:var(--ai)}
       el("p", { class: "note" }, "固定ハッシュは、承認が決まった後に保存してください。次回この画面の「承認時の固定ハッシュ」に入れると、定義の書き換えを照合できます。")));
     sheet.querySelector("h3")?.scrollIntoView({ behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth", block: "nearest" });
   }
+  buildForm(); blank();
   const btn = (label, fn) => { const b = el("button", { type: "button" }, label); b.addEventListener("click", fn); return b; };
 })();
 </script>
