@@ -1,0 +1,38 @@
+# 承認済みMCP接続先の定期監視（ラグプル検知）
+# pins/ に承認時の固定ハッシュ、monitor/targets.json に監視対象を置いてコミットしておく。
+# トークンが必要な接続先は、Secrets に登録して env で渡す（値をファイルに書かない）。
+name: mcp-monitor
+on:
+  schedule:
+    - cron: "0 0 * * *"   # 毎日 09:00 JST
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  monitor:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Run monitor
+        id: mon
+        env:
+          PATENT_MCP_TOKEN: ${{ secrets.PATENT_MCP_TOKEN }}
+        run: |
+          set +e
+          python -m mcpgate monitor --targets monitor/targets.json --pins pins -o monitor-report.md
+          echo "code=$?" >> "$GITHUB_OUTPUT"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: monitor-report
+          path: monitor-report.md
+      - name: Open issue when definitions changed
+        if: steps.mon.outputs.code == '2'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh issue create --title "MCP接続先の定義変更を検知（再審査が必要）" --body-file monitor-report.md

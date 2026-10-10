@@ -1,0 +1,53 @@
+{
+  "_note": "架空の回答例。実案件では提供元の回答・規約の原文で埋めること。",
+  "operator": {
+    "name": "株式会社パテントサンプル（架空）",
+    "corporate_number": "7000012050002",
+    "domain": "patent.example",
+    "security_contact": "security@patent.example",
+    "certifications": [
+      "ISMS (ISO/IEC 27001)"
+    ],
+    "verified_by_human": true
+  },
+  "auth": {
+    "method": "oauth2.1",
+    "token_passthrough": false,
+    "audience_validation": true,
+    "is_proxy": false,
+    "requested_scopes": [
+      "patents.read"
+    ],
+    "needed_scopes": [
+      "patents.read"
+    ]
+  },
+  "data": {
+    "max_classification_sent": "internal",
+    "allowed_classification": "internal",
+    "read_only_intended": true
+  },
+  "retention": {
+    "used_for_training": false,
+    "retention_days": 30,
+    "deletion_on_request": true,
+    "source_url": "https://patent.example/terms"
+  },
+  "hosting": {
+    "regions": [
+      "JP"
+    ],
+    "allowed_regions": [
+      "JP"
+    ],
+    "subprocessors_disclosed": true
+  },
+  "audit": {
+    "server_side_audit_log": true,
+    "log_export_available": true,
+    "client_side_logging": true
+  },
+  "policy": {
+    "max_retention_days": 30
+  }
+}

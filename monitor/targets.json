@@ -1,0 +1,7 @@
+[
+  {
+    "name": "patent-search",
+    "url": "https://mcp.patent.example/mcp",
+    "token_env": "PATENT_MCP_TOKEN"
+  }
+]

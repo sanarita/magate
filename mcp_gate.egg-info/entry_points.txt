@@ -1,0 +1,2 @@
+[console_scripts]
+mcp-gate = mcpgate.cli:main

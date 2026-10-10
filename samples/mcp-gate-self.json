@@ -1,0 +1,141 @@
+{
+  "server": {
+    "name": "mcp-gate",
+    "url": ""
+  },
+  "tools": [
+    {
+      "name": "audit_server",
+      "title": "MCP接続先の審査",
+      "description": "MCPサーバ（接続先）のセキュリティを審査し、許可／条件付き許可／不可の判定と理由を返す。ツールポイズニング・ラグプル・シャドーイング・トークン中継・過剰スコープと、7項目のルーブリックを評価する。審査対象のツールは実行しない。url か snapshot_path のどちらかを指定する。",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "url": {
+            "type": "string",
+            "description": "審査対象MCPサーバのURL（Streamable HTTP）",
+            "maxLength": 2048
+          },
+          "snapshot_path": {
+            "type": "string",
+            "description": "tools/list のJSONファイル（MCPGATE_HOME からの相対パス可）",
+            "maxLength": 512
+          },
+          "name": {
+            "type": "string",
+            "description": "サーバ名（省略時は自動）",
+            "maxLength": 128
+          },
+          "token_env": {
+            "type": "string",
+            "description": "アクセストークンを入れた環境変数名（トークンの値そのものは渡さない）",
+            "maxLength": 128
+          },
+          "questionnaire_path": {
+            "type": "string",
+            "description": "提供元の回答を入れた質問票JSON",
+            "maxLength": 512
+          },
+          "inventory_dir": {
+            "type": "string",
+            "description": "承認済みサーバのスナップショットを置いたフォルダ",
+            "maxLength": 512
+          },
+          "pins_dir": {
+            "type": "string",
+            "description": "固定ハッシュの保存フォルダ",
+            "maxLength": 512
+          },
+          "report_path": {
+            "type": "string",
+            "description": "原文入りの人間向けレポートの保存先（.md）",
+            "maxLength": 512
+          }
+        }
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "openWorldHint": true
+      }
+    },
+    {
+      "name": "pin_server",
+      "title": "承認済み定義の固定",
+      "description": "人が承認した接続先のツール定義をハッシュで固定する。承認者の明示的な指示があるときだけ使う。",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "url": {
+            "type": "string",
+            "description": "審査対象MCPサーバのURL（Streamable HTTP）",
+            "maxLength": 2048
+          },
+          "snapshot_path": {
+            "type": "string",
+            "description": "tools/list のJSONファイル（MCPGATE_HOME からの相対パス可）",
+            "maxLength": 512
+          },
+          "name": {
+            "type": "string",
+            "description": "サーバ名（省略時は自動）",
+            "maxLength": 128
+          },
+          "token_env": {
+            "type": "string",
+            "description": "アクセストークンを入れた環境変数名（トークンの値そのものは渡さない）",
+            "maxLength": 128
+          },
+          "pins_dir": {
+            "type": "string",
+            "maxLength": 512
+          },
+          "approved_by": {
+            "type": "string",
+            "description": "承認者",
+            "maxLength": 128
+          },
+          "note": {
+            "type": "string",
+            "maxLength": 500
+          }
+        },
+        "required": [
+          "pins_dir",
+          "approved_by"
+        ]
+      },
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false,
+        "openWorldHint": true
+      }
+    },
+    {
+      "name": "monitor_servers",
+      "title": "承認済み接続先の変更監視",
+      "description": "固定したツール定義と現在の定義を比較し、承認後の変更（ラグプル）があれば再審査が必要と報告する。",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "targets_path": {
+            "type": "string",
+            "description": "監視対象一覧JSON",
+            "maxLength": 512
+          },
+          "pins_dir": {
+            "type": "string",
+            "maxLength": 512
+          }
+        },
+        "required": [
+          "targets_path",
+          "pins_dir"
+        ]
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "openWorldHint": true
+      }
+    }
+  ]
+}

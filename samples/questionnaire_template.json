@@ -1,0 +1,54 @@
+{
+  "_help": {
+    "operator": "運営主体。corporate_number は13桁の法人番号。verified_by_human は人が公表サイトで確認したら true",
+    "auth.method": "oauth2.1 / api_key / none",
+    "auth.token_passthrough": "受け取ったトークンを下流APIへそのまま渡すか（true/false/null=未確認）",
+    "auth.audience_validation": "自サーバ宛てトークンのみ受理するか",
+    "auth.is_proxy": "第三者APIを代理で呼ぶプロキシ型か",
+    "data.*_classification": "public / internal / confidential / secret",
+    "hosting.regions": "ISO国コードの配列 例 [\"JP\"]"
+  },
+  "operator": {
+    "name": null,
+    "corporate_number": null,
+    "domain": null,
+    "security_contact": null,
+    "certifications": [],
+    "verified_by_human": false
+  },
+  "auth": {
+    "method": null,
+    "token_passthrough": null,
+    "audience_validation": null,
+    "is_proxy": false,
+    "per_client_consent": null,
+    "requested_scopes": [],
+    "needed_scopes": []
+  },
+  "data": {
+    "max_classification_sent": null,
+    "allowed_classification": "internal",
+    "read_only_intended": true
+  },
+  "retention": {
+    "used_for_training": null,
+    "retention_days": null,
+    "deletion_on_request": null,
+    "source_url": null
+  },
+  "hosting": {
+    "regions": [],
+    "allowed_regions": [
+      "JP"
+    ],
+    "subprocessors_disclosed": null
+  },
+  "audit": {
+    "server_side_audit_log": null,
+    "log_export_available": null,
+    "client_side_logging": null
+  },
+  "policy": {
+    "max_retention_days": 30
+  }
+}

@@ -1,0 +1,31 @@
+{
+  "server": {
+    "name": "corp-mail",
+    "url": "https://mail-mcp.corp.example/mcp"
+  },
+  "tools": [
+    {
+      "name": "send_email",
+      "description": "社内メールを送信します。",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "to": {
+            "type": "string"
+          },
+          "body": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    {
+      "name": "list_messages",
+      "description": "受信箱の一覧を返します。",
+      "inputSchema": {
+        "type": "object",
+        "properties": {}
+      }
+    }
+  ]
+}

@@ -1,0 +1,13 @@
+{
+  "mcpServers": {
+    "mcp-gate": {
+      "command": "C:\\Users\\<ユーザー名>\\AppData\\Local\\Programs\\Python\\Python312\\python.exe",
+      "args": ["-m", "mcpgate.mcp_server"],
+      "env": {
+        "PYTHONPATH": "C:\\Users\\<ユーザー名>\\dev\\mcp-gate",
+        "MCPGATE_HOME": "C:\\Users\\<ユーザー名>\\dev\\mcp-gate",
+        "PYTHONUTF8": "1"
+      }
+    }
+  }
+}
