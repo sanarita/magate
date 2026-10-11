@@ -55,7 +55,7 @@ def diff(pin: dict, snapshot: dict) -> dict:
 def check_rugpull(snapshot: dict, pins_dir: str | None) -> list[Finding]:
     if not pins_dir:
         return [Finding("rug_pull", UNKNOWN, "固定ハッシュの保存先が未指定のため、ラグプル監視は未設定です", ASI, LLM,
-                        condition="承認時に `mcp-gate pin` で定義を固定し、定期監視を設定すること")]
+                        condition="承認時に `magate pin` で定義を固定し、定期監視を設定すること")]
     pin = load_pin(pins_dir, snapshot["server"]["name"])
     if pin is None:
         return [Finding("rug_pull", OK, "初回審査（固定済みの定義なし）。承認後に `pin` で固定してください", ASI, LLM)]

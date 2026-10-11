@@ -25,7 +25,7 @@ jobs:
           PATENT_MCP_TOKEN: ${{ secrets.PATENT_MCP_TOKEN }}
         run: |
           set +e
-          python -m mcpgate monitor --targets monitor/targets.json --pins pins -o monitor-report.md
+          python -m magate monitor --targets monitor/targets.json --pins pins -o monitor-report.md
           echo "code=$?" >> "$GITHUB_OUTPUT"
       - uses: actions/upload-artifact@v4
         with:

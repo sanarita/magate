@@ -1,6 +1,6 @@
 import unittest
 
-from mcpgate.policy_agent import draft, ground
+from magate.policy_agent import draft, ground
 
 DOC = """第5条（データの取扱い）お客様が送信したデータは、当社のモデルの学習には利用しません。
 送信データは受信から30日間保存した後、自動的に削除します。

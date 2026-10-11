@@ -16,7 +16,7 @@ import urllib.request
 from .checks.poisoning import scan_text
 
 API_URL = "https://api.anthropic.com/v1/messages"
-DEFAULT_MODEL = os.environ.get("MCPGATE_MODEL", "claude-sonnet-5-5")
+DEFAULT_MODEL = os.environ.get("MAGATE_MODEL", "claude-sonnet-5-5")
 
 FIELDS = {
     "retention.used_for_training": "送信データがモデル学習に使われるか (true/false)",

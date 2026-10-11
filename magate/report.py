@@ -35,7 +35,7 @@ def _redact_evidence(ev: str) -> list[str]:
             out.append(f"{s[:2]} （内容は伏せ字。人間向けレポートを参照）")
         elif "「" in s:
             head = s.split("「", 1)[0].rstrip(" :：")
-            if " @ " in head:  # [rule +w] ラベル @ 場所  ← ラベルは mcp-gate 固定文言なので残す
+            if " @ " in head:  # [rule +w] ラベル @ 場所  ← ラベルは maGATE 固定文言なので残す
                 label, where = head.rsplit(" @ ", 1)
                 out.append(f"{label} @ {_safe(where)}")
             else:
@@ -65,7 +65,7 @@ def _to_markdown(r: Result, redact: bool = False) -> str:
          f"- 接続先URL：`{s.get('url') or '（スナップショット入力）'}`",
          *([f"- 審査対象：API仕様書（{'OpenAPI ' if not str(s.get('spec_version','')).startswith('2') else 'Swagger '}{s.get('spec_version')}、API版数 {s.get('api_version') or '-'}）"] if s.get("source") == "openapi" else []),
          f"- 取得日時：{s.get('fetched_at', '-')}",
-         f"- 判定ツール：mcp-gate（自動判定＋提供元回答に基づく。最終承認は人が行う）", "",
+         f"- 判定ツール：maGATE（自動判定＋提供元回答に基づく。最終承認は人が行う）", "",
          f"## 総合判定：{VERDICT_ICON[r.verdict]}", ""]
     if r.blockers:
         L += ["### 不可の理由", *[f"- {b}" for b in r.blockers], ""]
@@ -91,7 +91,7 @@ def _to_markdown(r: Result, redact: bool = False) -> str:
                     L += [f"  - 根拠: {line}" for line in _redact_evidence(f.evidence)]
                 else:
                     L += ["  ```", *[f"  {line}" for line in f.evidence.splitlines()], "  ```"]
-    L += ["", "---", "※ ASI番号との対応は mcp-gate の設計上の割り当てです（OWASP公式の対応表ではありません）。",
+    L += ["", "---", "※ ASI番号との対応は maGATE の設計上の割り当てです（OWASP公式の対応表ではありません）。",
           "※ ツールの annotations（readOnlyHint等）は提供元の自己申告であり、安全性の保証ではありません。"]
     return "\n".join(L) + "\n"
 

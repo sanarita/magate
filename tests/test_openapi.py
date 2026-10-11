@@ -4,14 +4,14 @@ import os
 import tempfile
 import unittest
 
-from mcpgate.checks import check_poisoning, check_rugpull
-from mcpgate.checks.rugpull import save_pin
-from mcpgate.cli import main
-from mcpgate.collect import load_openapi
-from mcpgate.model import FAIL, OK, WARN
-from mcpgate.openapi import OpenAPIError, to_snapshot
-from mcpgate.rubric import DENY, evaluate
-from mcpgate.web import openapi_json
+from magate.checks import check_poisoning, check_rugpull
+from magate.checks.rugpull import save_pin
+from magate.cli import main
+from magate.collect import load_openapi
+from magate.model import FAIL, OK, WARN
+from magate.openapi import OpenAPIError, to_snapshot
+from magate.rubric import DENY, evaluate
+from magate.web import openapi_json
 
 S = lambda n: os.path.join(os.path.dirname(__file__), "..", "samples", n)
 
@@ -90,7 +90,7 @@ class TestAuditOfApis(unittest.TestCase):
         with tempfile.NamedTemporaryFile("w", suffix=".yaml", delete=False, encoding="utf-8") as f:
             f.write("openapi: 3.0.0\n")
         try:
-            from mcpgate.collect import FetchError
+            from magate.collect import FetchError
             with self.assertRaises(FetchError):
                 load_openapi(f.name)
         finally:

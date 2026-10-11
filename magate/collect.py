@@ -14,7 +14,7 @@ import urllib.parse
 import urllib.request
 
 PROTOCOL_VERSION = "2025-11-25"
-UA = "mcp-gate/0.3 (+security review; read-only)"
+UA = "magate/0.4 (+security review; read-only)"
 TIMEOUT = 20
 
 
@@ -137,7 +137,7 @@ def fetch_http(url: str, token: str | None = None, name: str | None = None) -> d
     init = s.call("initialize", {
         "protocolVersion": PROTOCOL_VERSION,
         "capabilities": {},
-        "clientInfo": {"name": "mcp-gate", "version": "0.3.0"},
+        "clientInfo": {"name": "magate", "version": "0.3.0"},
     }, initialized=False)
     obs = {"https": url.lower().startswith("https://"), "token_supplied": bool(token)}
     tools, server_info = [], {}

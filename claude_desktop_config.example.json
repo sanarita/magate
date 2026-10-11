@@ -1,11 +1,11 @@
 {
   "mcpServers": {
-    "mcp-gate": {
+    "magate": {
       "command": "C:\\Users\\<ユーザー名>\\AppData\\Local\\Programs\\Python\\Python312\\python.exe",
-      "args": ["-m", "mcpgate.mcp_server"],
+      "args": ["-m", "magate.mcp_server"],
       "env": {
-        "PYTHONPATH": "C:\\Users\\<ユーザー名>\\dev\\mcp-gate",
-        "MCPGATE_HOME": "C:\\Users\\<ユーザー名>\\dev\\mcp-gate",
+        "PYTHONPATH": "C:\\Users\\<ユーザー名>\\dev\\maGATE",
+        "MAGATE_HOME": "C:\\Users\\<ユーザー名>\\dev\\maGATE",
         "PYTHONUTF8": "1"
       }
     }

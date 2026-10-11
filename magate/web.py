@@ -48,13 +48,13 @@ def run(snapshot_text: str, questionnaire_text: str = "", inventory_texts: list[
         raise InputError("質問票はJSONオブジェクトにしてください")
     inv = [_snapshot(_parse(t, f"承認済み一覧{i + 1}"), f"承認済み一覧{i + 1}") for i, t in enumerate(inventory_texts) if t.strip()]
 
-    work = tempfile.mkdtemp(prefix="mcpgate-")
+    work = tempfile.mkdtemp(prefix="magate-")
     try:
         pins_dir = None
         if pin_text.strip():
             pin = _parse(pin_text, "固定ハッシュ")
             if not isinstance(pin, dict) or "manifest" not in pin or "tools" not in pin:
-                raise InputError("固定ハッシュのファイル形式が違います（mcp-gate pin で作った .pin.json を指定）")
+                raise InputError("固定ハッシュのファイル形式が違います（magate pin で作った .pin.json を指定）")
             pins_dir = os.path.join(work, "pins")
             os.makedirs(pins_dir)
             # 照合は審査対象のサーバ名で行う

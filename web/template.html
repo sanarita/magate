@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>mcp-gate｜MCP・API接続先の審査</title>
+<title>maGATE｜MCP・API接続先の審査</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&family=Shippori+Mincho+B1:wght@600;800&display=swap" rel="stylesheet">
@@ -119,6 +119,11 @@ details.more textarea{margin-top:8px;min-height:70px}
 .check{display:flex;gap:8px;align-items:flex-start;color:var(--ink);font-size:13.5px}
 .check input{margin-top:4px}
 .hint{font-size:12px;color:var(--muted);margin-top:2px}
+.fetchlog{margin:8px 0 4px;border:1px solid var(--rule);border-radius:4px;background:var(--surface);padding:8px 10px;font-size:12.5px}
+.fetchlog p{margin:2px 0}
+.fetchlog .ok{color:var(--ai)} .fetchlog .ng{color:var(--shu)} .fetchlog .warn{color:var(--odo)}
+.fetchlog .sum{font-weight:700;margin-top:6px}
+code{font:12px var(--mono)}
 .sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
 </style>
 </head>
@@ -127,7 +132,7 @@ details.more textarea{margin-top:8px;min-height:70px}
   <header>
     <h1>MCP・API接続先の審査</h1>
     <p class="lede">生成AIを社外のMCPサーバやAPIにつなぐ前に、ツール定義・API仕様書と提供元の回答から、許可・条件付き許可・不可を判定します。</p>
-    <p class="privacy">入力した内容はこのブラウザの中だけで処理され、どこにも送信されません。審査対象のサーバにもアクセスしません。外部との通信は、解析エンジン（Pyodide）と文字フォントの読み込みだけです。</p>
+    <p class="privacy">入力した内容はこのブラウザの中だけで処理され、どこにも送信されません。審査対象のサーバには、「URLから取得」を押したときだけ、あなたのブラウザから直接接続します（中継サーバは使いません）。それ以外の外部通信は、解析エンジン（Pyodide）と文字フォントの読み込みだけです。</p>
   </header>
 
   <div class="layout">
@@ -144,8 +149,18 @@ details.more textarea{margin-top:8px;min-height:70px}
         <p class="help">提供元の資料やWebページに載っている、ツールの名前と説明文をそのまま貼り付けます。</p>
         <div class="grid2">
           <label>接続先の名前<input id="srv-name" type="text" placeholder="例：特許検索サービス" autocomplete="off"></label>
-          <label>URL（任意・記録用）<input id="srv-url" type="url" placeholder="https://…" autocomplete="off"><span class="hint" style="display:block">この画面からURLへはアクセスしません</span></label>
+          <label>MCPサーバのURL（任意）<input id="srv-url" type="url" placeholder="https://…/mcp" autocomplete="off" list="mcp-examples"><span class="hint" style="display:block">下のボタンを押したときだけアクセスします</span></label>
         </div>
+        <datalist id="mcp-examples">
+          <option value="https://mcp.deepwiki.com/mcp">DeepWiki（認証不要）</option>
+          <option value="https://mcp.context7.com/mcp">Context7（認証不要）</option>
+          <option value="https://mcp.notion.com/mcp">Notion（OAuth必須）</option>
+        </datalist>
+        <div class="row">
+          <button type="button" id="fetch-url">URLから取得（試験的）</button>
+        </div>
+        <p class="help">押すと、あなたのブラウザから接続先へ接続し、ツール一覧だけを取得します（ツールは実行しません）。接続先がブラウザからの接続を許可していない場合は取得できません。その場合はコマンドライン版の <code>snapshot</code> を使ってください。</p>
+        <div id="fetch-log" class="fetchlog" hidden aria-live="polite"></div>
         <div id="tools"></div>
         <div class="row">
           <button type="button" id="add-tool">＋ ツールを追加</button>
@@ -221,14 +236,14 @@ details.more textarea{margin-top:8px;min-height:70px}
   </div>
 
   <footer>
-    判定はルールに基づく機械的なもので、最終的な承認は人が行います。ASI番号との対応は mcp-gate の設計上の割り当てで、OWASP公式の対応表ではありません。
+    判定はルールに基づく機械的なもので、最終的な承認は人が行います。ASI番号との対応は maGATE の設計上の割り当てで、OWASP公式の対応表ではありません。
     ツールの annotations は提供元の自己申告であり、安全性の保証ではありません。<br>
-    mcp-gate v__MCPGATE_VERSION__ ／ ソース：<a href="https://github.com/__GITHUB_REPO__">github.com/__GITHUB_REPO__</a>
+    maGATE v__MAGATE_VERSION__ ／ ソース：<a href="https://github.com/__GITHUB_REPO__">github.com/__GITHUB_REPO__</a>
   </footer>
 </div>
 
-<script type="application/json" id="py-sources">__MCPGATE_SOURCES__</script>
-<script type="application/json" id="samples">__MCPGATE_SAMPLES__</script>
+<script type="application/json" id="py-sources">__MAGATE_SOURCES__</script>
+<script type="application/json" id="samples">__MAGATE_SAMPLES__</script>
 <script src="https://cdn.jsdelivr.net/npm/pyodide@0.26.4/pyodide.js"></script>
 <script>
 (() => {
@@ -251,7 +266,7 @@ details.more textarea{margin-top:8px;min-height:70px}
         py.FS.writeFile(full, code);
       }
       py.runPython("import sys\nif '/home/pyodide' not in sys.path: sys.path.insert(0, '/home/pyodide')");
-      web = py.pyimport("mcpgate.web");
+      web = py.pyimport("magate.web");
       $("engine").textContent = "解析エンジンの準備ができました。";
       $("run").disabled = false;
     } catch (e) {
@@ -315,6 +330,107 @@ details.more textarea{margin-top:8px;min-height:70px}
   document.querySelectorAll("button[data-spec]").forEach((b) => b.addEventListener("click", () => loadSnapText(pretty(SAMPLES[b.dataset.spec]))));
   $("snap-file").addEventListener("change", async (ev) => { if (ev.target.files[0]) loadSnapText(await ev.target.files[0].text()); ev.target.value = ""; });
   $("snap-load").addEventListener("click", () => loadSnapText($("snap-json").value));
+
+
+  // ---------- URLから取得（利用者のブラウザから直接、中継なし）----------
+  const PROTOCOL = "2025-11-25";
+  function parseRpc(text, ctype, id) {
+    if ((ctype || "").includes("text/event-stream")) {
+      for (const block of text.split(/\r?\n\r?\n/)) {
+        const data = block.split(/\r?\n/).filter((l) => l.startsWith("data:")).map((l) => l.slice(5).trimStart()).join("\n");
+        if (!data) continue;
+        try { const m = JSON.parse(data); if (m && m.id === id) return m; } catch {}
+      }
+      return null;
+    }
+    try { return JSON.parse(text); } catch { return null; }
+  }
+  async function rpc(url, state, method, params, id) {
+    const headers = { "Content-Type": "application/json", "Accept": "application/json, text/event-stream" };
+    if (state.version) headers["MCP-Protocol-Version"] = state.version;
+    if (state.sid) headers["Mcp-Session-Id"] = state.sid;
+    const body = { jsonrpc: "2.0", method };
+    if (params !== undefined) body.params = params;
+    if (id !== undefined) body.id = id;
+    const ctrl = new AbortController(); const timer = setTimeout(() => ctrl.abort(), 15000);
+    try {
+      const res = await fetch(url, { method: "POST", headers, body: JSON.stringify(body), signal: ctrl.signal, credentials: "omit", referrerPolicy: "no-referrer" });
+      const sid = res.headers.get("mcp-session-id");
+      if (sid) state.sid = sid;
+      const text = await res.text();
+      return { status: res.status, ctype: res.headers.get("content-type") || "", sidVisible: !!sid, msg: id === undefined ? null : parseRpc(text, res.headers.get("content-type"), id) };
+    } finally { clearTimeout(timer); }
+  }
+  function logLine(cls, text) { $("fetch-log").append(el("p", { class: cls }, text)); }
+
+  async function fetchFromUrl() {
+    const url = $("srv-url").value.trim();
+    const log = $("fetch-log"); log.replaceChildren(); log.hidden = false;
+    $("err").hidden = true;
+    if (!/^https?:\/\//i.test(url)) { logLine("ng", "× URLは https:// から始めてください"); return; }
+    if (!/^https:\/\//i.test(url)) logLine("warn", "△ HTTPSではありません（通信が暗号化されません）");
+    const btn = $("fetch-url"); btn.disabled = true;
+    const state = {}; const started = Date.now();
+    let verdict = "";
+    try {
+      // 1) 接続の開始
+      let r;
+      try {
+        r = await rpc(url, state, "initialize", { protocolVersion: PROTOCOL, capabilities: {}, clientInfo: { name: "magate-web", version: "__MAGATE_VERSION__" } }, 1);
+      } catch (e) {
+        logLine("ng", e.name === "AbortError" ? "× 接続の開始：15秒以内に応答がありません" : "× 接続の開始：ブラウザが応答を受け取れませんでした");
+        logLine("", "　考えられる原因：接続先がブラウザからの接続を許可していない（CORS）、URLの誤り、ネットワークの制限");
+        verdict = "ブラウザから取得：不可（CORSで拒否、または接続できない）";
+        return;
+      }
+      const authNeeded = r.status === 401 || r.status === 403;
+      logLine(r.status === 200 ? "ok" : authNeeded ? "warn" : "ng", `${r.status === 200 ? "○" : authNeeded ? "△" : "×"} 接続の開始：HTTP ${r.status}（${r.ctype.includes("event-stream") ? "SSE形式" : "JSON形式"}）`);
+      if (r.status === 401 || r.status === 403) {
+        logLine("warn", "△ このサーバはログイン（OAuth）が必要です。ブラウザ版ではログインに対応していないため、ツール一覧は取得できません");
+        verdict = "ブラウザから接続：可／ツール一覧：認証が必要";
+        return;
+      }
+      if (r.status !== 200 || !r.msg || !r.msg.result) {
+        logLine("ng", "× 接続の開始に失敗しました（MCPサーバとして応答していない可能性）");
+        verdict = "ブラウザから接続：可／MCPの応答：不正";
+        return;
+      }
+      const info = r.msg.result.serverInfo || {};
+      state.version = r.msg.result.protocolVersion || PROTOCOL;
+      logLine("", `　サーバ：${info.name || "名称なし"} ${info.version || ""}／プロトコル ${state.version}`);
+      if (state.sid) logLine("ok", "○ セッションIDを受け取れました");
+      // 2) 初期化完了の通知（失敗しても続行）
+      try { await rpc(url, state, "notifications/initialized"); } catch {}
+      // 3) ツール一覧（ページング対応）
+      const tools = []; let cursor = null, page = 0;
+      do {
+        let t;
+        try { t = await rpc(url, state, "tools/list", cursor ? { cursor } : {}, 10 + page); }
+        catch { logLine("ng", "× ツール一覧：ブラウザが応答を受け取れませんでした"); verdict = "ブラウザから接続：開始のみ可／ツール一覧：不可"; return; }
+        if (t.status !== 200 || !t.msg || !t.msg.result) {
+          logLine("ng", `× ツール一覧：HTTP ${t.status}`);
+          if (!state.sid && t.status === 400) logLine("", "　考えられる原因：サーバがセッションIDを返しているが、ブラウザから読めない設定（Access-Control-Expose-Headers）になっている");
+          verdict = "ブラウザから接続：開始のみ可／ツール一覧：不可";
+          return;
+        }
+        tools.push(...(t.msg.result.tools || []));
+        cursor = t.msg.result.nextCursor || null; page++;
+      } while (cursor && page < 50);
+      logLine("ok", `○ ツール一覧：${tools.length} 件を取得（${((Date.now() - started) / 1000).toFixed(1)} 秒）`);
+      setSnap({
+        server: { name: info.name || new URL(url).host, url, serverInfo: info, fetched_at: new Date().toISOString(), fetched_via: "browser" },
+        observations: { https: /^https:/i.test(url), auth_required: false, unauthenticated_tools_list: tools.length > 0, fetched_via: "browser" },
+        tools, oauth: { protected_resource: null, authorization_server: null },
+      });
+      $("srv-url").value = url;
+      verdict = `ブラウザから取得：可（ツール ${tools.length} 件）`;
+      logLine("", "　取得した定義を下の入力欄に入れました。質問票を記入して「審査する」を押してください");
+    } finally {
+      if (verdict) logLine("sum", "結果：" + verdict);
+      btn.disabled = false;
+    }
+  }
+  $("fetch-url").addEventListener("click", fetchFromUrl);
 
   // ---------- 2. 質問票（フォーム → JSON を自動生成）----------
   const TRI = [["", "不明・未回答"], ["yes", "はい"], ["no", "いいえ"]];
@@ -506,7 +622,7 @@ details.more textarea{margin-top:8px;min-height:70px}
     const cls = r.verdict === "不可" ? "deny" : r.verdict === "条件付き許可" ? "cond" : "";
     const stampText = r.verdict === "条件付き許可" ? ["条件付", "許可"] : [r.verdict];
     const stamp = el("div", { class: `stamp ${cls} press`, role: "img", "aria-label": "総合判定：" + r.verdict },
-      el("span", {}, ...stampText.flatMap((t, i) => i ? [el("br"), t] : [t]), el("small", {}, "mcp-gate 審査")));
+      el("span", {}, ...stampText.flatMap((t, i) => i ? [el("br"), t] : [t]), el("small", {}, "maGATE 審査")));
 
     const sheet = $("sheet"); sheet.replaceChildren();
     sheet.append(el("div", { class: "sheet-head" },

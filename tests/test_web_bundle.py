@@ -23,7 +23,7 @@ class Block:
             raise ImportError("blocked in browser build: " + name)
 sys.meta_path.insert(0, Block())
 sys.path.insert(0, sys.argv[1])
-import mcpgate.web as w
+import magate.web as w
 s = json.loads(open(sys.argv[2], encoding="utf-8").read())
 out = json.loads(w.run_json(json.dumps(s["poisoned"]), json.dumps(s["questionnaire"]), json.dumps([json.dumps(s["inventory"])])))
 ok = json.loads(w.run_json(json.dumps(s["clean"]), json.dumps(s["questionnaire"]), "[]", json.dumps(s["pin"])))

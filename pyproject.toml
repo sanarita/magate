@@ -1,17 +1,17 @@
 [project]
-name = "mcp-gate"
-version = "0.3.0"
-description = "MCP接続先のセキュリティ審査エージェント（ツールポイズニング・ラグプル・シャドーイング・トークン中継・過剰スコープ）"
+name = "magate"
+version = "0.4.0"
+description = "maGATE — MCP・API接続先のセキュリティ審査ツール（ツールポイズニング・ラグプル・シャドーイング・トークン中継・過剰スコープ、OpenAPI対応）"
 readme = "README.md"
 requires-python = ">=3.10"
 dependencies = []
 
 [project.scripts]
-mcp-gate = "mcpgate.cli:main"
+magate = "magate.cli:main"
 
 [build-system]
 requires = ["setuptools>=68"]
 build-backend = "setuptools.build_meta"
 
 [tool.setuptools]
-packages = ["mcpgate", "mcpgate.checks"]
+packages = ["magate", "magate.checks"]

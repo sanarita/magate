@@ -6,16 +6,16 @@ import sys
 import tempfile
 import unittest
 
-from mcpgate.checks import check_poisoning
-from mcpgate.mcp_server import TOOLS
+from magate.checks import check_poisoning
+from magate.mcp_server import TOOLS
 
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 
 
 def run(messages, home=ROOT):
-    env = {**os.environ, "MCPGATE_HOME": home, "PYTHONPATH": ROOT}
+    env = {**os.environ, "MAGATE_HOME": home, "PYTHONPATH": ROOT}
     data = "\n".join(json.dumps(m) for m in messages) + "\n"
-    p = subprocess.run([sys.executable, "-m", "mcpgate.mcp_server"], input=data.encode(), capture_output=True, env=env, timeout=30)
+    p = subprocess.run([sys.executable, "-m", "magate.mcp_server"], input=data.encode(), capture_output=True, env=env, timeout=30)
     return [json.loads(l) for l in p.stdout.decode("utf-8").splitlines() if l.strip()]
 
 
@@ -31,7 +31,7 @@ INIT = [{"jsonrpc": "2.0", "id": 0, "method": "initialize",
 class TestMcpServer(unittest.TestCase):
     def test_handshake_and_list(self):
         out = run(INIT + [{"jsonrpc": "2.0", "id": 1, "method": "tools/list"}])
-        self.assertEqual(out[0]["result"]["serverInfo"]["name"], "mcp-gate")
+        self.assertEqual(out[0]["result"]["serverInfo"]["name"], "magate")
         self.assertEqual({t["name"] for t in out[1]["result"]["tools"]}, {"audit_server", "pin_server", "monitor_servers"})
 
     def test_audit_redacts_attacker_text(self):
@@ -65,8 +65,8 @@ class TestMcpServer(unittest.TestCase):
             self.assertIn("再審査が必要", out[2]["result"]["content"][0]["text"])
 
     def test_self_audit(self):
-        """mcp-gate 自身のツール定義が、自分の審査を通ること。"""
-        fs = check_poisoning({"server": {"name": "mcp-gate"}, "tools": TOOLS})
+        """maGATE 自身のツール定義が、自分の審査を通ること。"""
+        fs = check_poisoning({"server": {"name": "maGATE"}, "tools": TOOLS})
         self.assertEqual([f.status for f in fs], ["OK"])
 
 

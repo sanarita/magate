@@ -4,7 +4,7 @@ import threading
 import unittest
 from http.server import BaseHTTPRequestHandler, HTTPServer
 
-from mcpgate.collect import fetch_http
+from magate.collect import fetch_http
 
 TOOLS = [{"name": f"t{i}", "description": f"tool {i}", "inputSchema": {"type": "object"}} for i in range(3)]
 

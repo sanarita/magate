@@ -4,12 +4,12 @@ import os
 import tempfile
 import unittest
 
-from mcpgate.checks import check_poisoning, check_rugpull, check_scopes, check_shadowing
-from mcpgate.checks.auth import check_auth
-from mcpgate.checks.rugpull import save_pin
-from mcpgate.collect import load_snapshot
-from mcpgate.model import FAIL, OK, UNKNOWN, WARN
-from mcpgate.rubric import CONDITIONAL, DENY, PERMIT, corporate_number_valid, evaluate
+from magate.checks import check_poisoning, check_rugpull, check_scopes, check_shadowing
+from magate.checks.auth import check_auth
+from magate.checks.rugpull import save_pin
+from magate.collect import load_snapshot
+from magate.model import FAIL, OK, UNKNOWN, WARN
+from magate.rubric import CONDITIONAL, DENY, PERMIT, corporate_number_valid, evaluate
 
 HERE = os.path.dirname(__file__)
 S = lambda n: os.path.join(HERE, "..", "samples", n)

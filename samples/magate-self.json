@@ -1,6 +1,6 @@
 {
   "server": {
-    "name": "mcp-gate",
+    "name": "maGATE",
     "url": ""
   },
   "tools": [
@@ -18,7 +18,7 @@
           },
           "snapshot_path": {
             "type": "string",
-            "description": "tools/list のJSONファイル（MCPGATE_HOME からの相対パス可）",
+            "description": "tools/list のJSONファイル（MAGATE_HOME からの相対パス可）",
             "maxLength": 512
           },
           "name": {
@@ -72,7 +72,7 @@
           },
           "snapshot_path": {
             "type": "string",
-            "description": "tools/list のJSONファイル（MCPGATE_HOME からの相対パス可）",
+            "description": "tools/list のJSONファイル（MAGATE_HOME からの相対パス可）",
             "maxLength": 512
           },
           "name": {

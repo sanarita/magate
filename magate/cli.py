@@ -1,10 +1,11 @@
-"""mcp-gate コマンドライン。
+"""maGATE コマンドライン。
 
   audit    接続先を審査してレポートを出す（許可／条件付き許可／不可）
   pin      承認時点のツール定義をハッシュで固定する
   monitor  固定した定義と現在の定義を比較し、差分があれば再審査に回す（終了コード 2）
   draft-q  規約本文から質問票の下書きを作る（LLM使用・任意）
   snapshot 接続先からツール定義とOAuthメタデータを取得して保存する
+  cors-check ブラウザ版の「URLから取得」が使えるか（CORS）を調べる
 """
 from __future__ import annotations
 
@@ -112,6 +113,23 @@ def cmd_monitor(a):
     return EXIT_CHANGED if changed else EXIT_OK
 
 
+def cmd_cors(a):
+    from .corsprobe import DEFAULT_ORIGIN, probe, to_markdown
+    urls = list(a.url or [])
+    if a.targets:
+        with open(a.targets, encoding="utf-8") as f:
+            urls += [t["url"] if isinstance(t, dict) else t for t in json.load(f)]
+    if not urls:
+        print("--url か --targets で接続先を指定してください", file=sys.stderr)
+        return EXIT_ERROR
+    results = []
+    for u in urls:
+        print(f"調査中: {u}", file=sys.stderr)
+        results.append(probe(u, a.origin or DEFAULT_ORIGIN))
+    _write(a.out, json.dumps(results, ensure_ascii=False, indent=2) if a.json else to_markdown(results, a.origin or DEFAULT_ORIGIN))
+    return EXIT_OK
+
+
 def cmd_draft_q(a):
     from .policy_agent import draft
     key = os.environ.get("ANTHROPIC_API_KEY")
@@ -126,8 +144,8 @@ def cmd_draft_q(a):
 
 
 def main(argv=None) -> int:
-    p = argparse.ArgumentParser(prog="mcp-gate", description="MCP接続先セキュリティ審査エージェント")
-    p.add_argument("--version", action="version", version=f"mcp-gate {__version__}")
+    p = argparse.ArgumentParser(prog="magate", description="maGATE — MCP・API接続先のセキュリティ審査ツール")
+    p.add_argument("--version", action="version", version=f"maGATE {__version__}")
     sub = p.add_subparsers(dest="cmd", required=True)
 
     s = sub.add_parser("snapshot", help="ツール定義とOAuthメタデータを取得して保存")
@@ -159,6 +177,13 @@ def main(argv=None) -> int:
     s.add_argument("--pins", required=True)
     s.add_argument("--out", "-o")
     s.set_defaults(func=cmd_monitor)
+
+    s = sub.add_parser("cors-check", help="ブラウザ版の「URLから取得」が使えるか（CORS）を調べる")
+    s.add_argument("--url", action="append", help="調べるMCPサーバのURL（複数指定可）")
+    s.add_argument("--targets", help="URLの一覧JSON（文字列の配列、または {url} の配列）")
+    s.add_argument("--origin", help="ブラウザ版の公開元（既定：https://sanarita.github.io）")
+    s.add_argument("--out", "-o"); s.add_argument("--json", action="store_true")
+    s.set_defaults(func=cmd_cors)
 
     s = sub.add_parser("draft-q", help="規約本文から質問票の下書きを作る（LLM使用）")
     s.add_argument("--policy", required=True, help="規約・プライバシーポリシーのテキストファイル")

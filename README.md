@@ -1,6 +1,8 @@
-# mcp-gate — MCP・API接続先のセキュリティ審査ツール
+# maGATE — MCP・API接続先のセキュリティ審査ツール
 
-**▶ ブラウザで試す：https://sanarita.github.io/mcp-gate/** （インストール不要・入力は外部に送信されません）
+**maGATE**（m＝MCP、a＝API）は、生成AIをMCPサーバやAPIにつなぐ**前に**、その接続先を審査する関門です。
+
+**▶ ブラウザで試す：https://sanarita.github.io/magate/** （インストール不要・入力は外部に送信されません）
 
 関連ツール：[IPI Guard Chat](https://github.com/sanarita/ipi-guard-chat)（文書の検査）／[skillscan](https://github.com/sanarita/skillscan)（スキルの検査）
 
@@ -10,9 +12,23 @@ Claude・Copilot などの生成AIを外部の MCP サーバ／API に接続し�
 
 - MCPサーバに加え、APIの仕様書（OpenAPI 3.x／Swagger 2.0、Copilot Studioのカスタムコネクタを含む）も審査可能
 - 判定はルールベース（LLMを使わない）。同じ入力なら必ず同じ結果になり、判定理由をたどれる
-- Python 標準ライブラリのみ（追加インストール不要）、自動テスト42件
+- Python 標準ライブラリのみ（追加インストール不要）、自動テスト50件
 - 審査対象のツールやAPIは一度も実行しない（読むのは MCP のツール一覧・OAuth メタデータ・API 仕様書だけ）
 - IPI Guard / skillscan と同じ「パターン採点＋外部抽出器の差し込み口」設計
+
+## 他社のAPI・MCPにつなぐときのリスクと対応範囲
+
+maGATE が受け持つのは、**接続前の審査と承認後の監視**です。それ以外のリスクは、他の対策と組み合わせて管理します。
+
+| リスク | maGATEでの対応 | 他に必要な対策 |
+|---|---|---|
+| 接続先の定義に、AIへの命令が仕込まれている | ○ 接続前に検出 | — |
+| 承認後に、接続先が定義を書き換える | ○ 承認時の定義を固定し、定期監視で検知 | 監視結果を誰が確認するかの決め |
+| 送ったデータが学習に使われる・保存される・国外で処理される | △ 質問票で確認し、条件を明示 | 契約・利用規約での担保 |
+| 必要以上の権限、書き込み・削除の操作がある | ○ 権限と操作を洗い出す | 接続設定で不要な操作を無効化 |
+| 接続先から返ってくるデータに命令が混ざっている | × 対象外（maGATEは定義だけを見る） | 返却データの検査（[IPI Guard Chat](https://github.com/sanarita/ipi-guard-chat) など）、接続後の監視 |
+| APIキーなどの認証情報が漏れる | △ 方式の指摘のみ | 保管場所とローテーションのルール |
+| 利用者が申請せずに接続する | × 対象外 | 申請ルール、ゲートウェイでの接続先の制限 |
 
 ## 何を自動でやるか
 
@@ -65,7 +81,7 @@ flowchart TB
 
 ```powershell
 # リポジトリのフォルダで実行（uv を使わない場合は uv run を外して python で実行）
-uv run python -m mcpgate audit --snapshot samples\patent_clean.json -q samples\questionnaire_patent.json --inventory samples\inventory -o out\report.md
+uv run python -m magate audit --snapshot samples\patent_clean.json -q samples\questionnaire_patent.json --inventory samples\inventory -o out\report.md
 ```
 
 | コマンド | 内容 |
@@ -75,6 +91,7 @@ uv run python -m mcpgate audit --snapshot samples\patent_clean.json -q samples\q
 | `pin (--url \| --snapshot) --pins DIR --approved-by 名前` | 承認時点の定義を固定 |
 | `monitor --targets targets.json --pins DIR` | 固定定義との差分監視 |
 | `draft-q --policy 規約.txt --source URL` | 規約から質問票の下書きを作成（要 `ANTHROPIC_API_KEY`） |
+| `cors-check --targets URL一覧.json` | ブラウザ版の「URLから取得」が使えるか（CORS）を、ブラウザと同じ手順で調べる |
 
 トークンが必要な接続先は `--token-env 環境変数名` で渡します（値をコマンドラインやファイルに書かない）。
 
@@ -100,23 +117,24 @@ uv run python -m mcpgate audit --snapshot samples\patent_clean.json -q samples\q
 
 インストール不要で、ブラウザから審査できる画面を `docs/index.html` に用意しています。
 
-- **入力はすべてブラウザ内で処理**し、外部に送信しません。審査対象のサーバにもアクセスしません（ツール定義はJSONで読み込む）。
+- **入力はすべてブラウザ内で処理**し、外部に送信しません。ツール名・説明文の貼り付け、tools/list や OpenAPI の JSON 読み込みで審査できます。
+- 「URLから取得（試験的）」を押したときだけ、**利用者のブラウザから直接**接続先へ接続し、ツール一覧を取得します（中継サーバは使いません）。接続先がブラウザからの接続（CORS）を許可していない場合は取得できないため、CLI の `snapshot` を使います。
 - 外部との通信は、解析エンジン Pyodide（cdn.jsdelivr.net）と Google Fonts の読み込みだけです。
 - 審査ロジックはCLIと同じPythonコードを埋め込んで動かしています。通信を伴うモジュール（collect / cli / mcp_server / policy_agent）は含めていません。
 
-公開URL：https://sanarita.github.io/mcp-gate/ （フォークして使う場合は Settings → Pages で `main` の `/docs` を指定）
+公開URL：https://sanarita.github.io/magate/ （フォークして使う場合は Settings → Pages で `main` の `/docs` を指定）
 
 ### コードを変更したら
 
 ```powershell
-python tools/build_web.py --repo sanarita/mcp-gate
+python tools/build_web.py --repo sanarita/magate
 ```
 
 で `docs/index.html` を作り直してコミットします。作り直し忘れは `test_bundle_is_in_sync_with_source` が検出します。
 
 ## Claude Desktop から使う（MCPサーバ）
 
-mcp-gate 自体を MCP サーバとして Claude Desktop に登録すると、チャットで審査を依頼できます。
+maGATE 自体を MCP サーバとして Claude Desktop に登録すると、チャットで審査を依頼できます。
 
 | ツール | 内容 |
 |---|---|
@@ -128,7 +146,7 @@ mcp-gate 自体を MCP サーバとして Claude Desktop に登録すると、�
 
 1. `where python` で Python の**フルパス**を確認する（Claude Desktop は PATH を引き継がないことがあるため。`WindowsApps` 配下のパスはストアのエイリアスなので使わない）
 2. Claude Desktop の設定から開発者向けの設定ファイル（`claude_desktop_config.json`）を開き、`claude_desktop_config.example.json` の内容を追記する。`<ユーザー名>` と Python のパスを置き換える
-3. Claude Desktop を完全に終了して再起動し、ツール一覧に `mcp-gate` が出ることを確認する
+3. Claude Desktop を完全に終了して再起動し、ツール一覧に `maGATE` が出ることを確認する
 
 ### 使い方の例
 
@@ -137,9 +155,9 @@ mcp-gate 自体を MCP サーバとして Claude Desktop に登録すると、�
 ### Claude 向けの安全設計
 
 - **Claude に返す結果は伏せ字。** 審査対象の悪意ある説明文の抜粋は返さず、ルールIDと場所（例：`search_patents.description`）だけを返します。抜粋そのものが Claude への間接プロンプトインジェクションになるのを防ぐためです。原文入りの人間向けレポートは `report_path` にファイルで保存します。
-- **ファイルアクセスは `MCPGATE_HOME` 配下に限定。** それ以外のパスは拒否します。
-- **審査対象のサーバは、承認されるまで Claude Desktop に登録しないこと。** mcp-gate は「接続前の関所」です。
-- mcp-gate 自身のツール定義も、自分の審査を通ることをテストで確認しています（`test_self_audit`）。
+- **ファイルアクセスは `MAGATE_HOME` 配下に限定。** それ以外のパスは拒否します。
+- **審査対象のサーバは、承認されるまで Claude Desktop に登録しないこと。** maGATE は「接続前の関所」です。
+- maGATE 自身のツール定義も、自分の審査を通ることをテストで確認しています（`test_self_audit`）。
 
 > 社内PCで使う場合は、Claude Desktop へのローカルMCPサーバ追加と、外部サーバへのアクセスが社内ルール上問題ないか、情報システム部門に確認してください。
 
@@ -165,3 +183,22 @@ uv run python -m unittest discover -s tests -t .
 ```
 
 模擬 MCP サーバ（Streamable HTTP・SSE応答・ページング・OAuthメタデータ）を立てた取得テストを含みます。
+
+## 名称について
+
+maGATE は v0.4.0 で `mcp-gate` から改名しました。接続後の MCP 通信を制御するゲートウェイ「mcpgate」（別プロジェクト）とは異なるツールです。maGATE は、接続を許可する**前**の審査を行います。
+
+## 他ツールとの関係
+
+生成AIとMCP・APIまわりのセキュリティ対策は、大きく次の系統に分かれます。
+
+| 系統 | 役割 | 使うタイミング |
+|---|---|---|
+| 審査（maGATE） | 接続してよいかを判断する | 接続の前 |
+| ゲートウェイ | 実際のツール呼び出しを許可・拒否・記録する | 接続の後 |
+| ローカルスキャナ | 開発者のPCにすでに入っているMCPを点検する | 定期的な棚卸し |
+| API自体の防御 | 自社APIへの不正アクセスを防ぐ（OWASP API Security Top 10） | APIの設計・運用 |
+
+maGATE は「接続の前」に特化しています。審査で許可した接続先だけをゲートウェイに登録する、という組み合わせで使うことを想定しています。
+攻撃者が自社のAPIを直接呼び出すような攻撃は、maGATEの対象外です。ただし、自社のAPIをCopilot StudioのコネクタやMCP経由でAIに使わせる場合は、maGATEでAPI仕様書を審査することで、AIに渡すと危険な操作（書き込み・削除）や広すぎる権限を事前に洗い出せます。
+
