@@ -16,7 +16,7 @@ import sys
 
 from . import __version__
 from .checks.rugpull import check_rugpull, save_pin
-from .collect import FetchError, fetch_http, load_snapshot
+from .collect import FetchError, fetch_http, load_openapi, load_snapshot
 from .model import FAIL, WARN
 from .report import to_json, to_markdown
 from .rubric import DENY, PERMIT, evaluate
@@ -25,6 +25,8 @@ EXIT_OK, EXIT_ERROR, EXIT_CHANGED, EXIT_DENY = 0, 1, 2, 3
 
 
 def _snapshot(args) -> dict:
+    if getattr(args, "openapi", None):
+        return load_openapi(args.openapi, name=args.name)
     if args.snapshot:
         return load_snapshot(args.snapshot)
     token = os.environ.get(args.token_env) if args.token_env else None
@@ -51,6 +53,7 @@ def _src(p):
     g = p.add_mutually_exclusive_group(required=True)
     g.add_argument("--url", help="MCPサーバのURL（Streamable HTTP）")
     g.add_argument("--snapshot", help="保存済みスナップショット／tools/list のJSON")
+    g.add_argument("--openapi", help="API の仕様書（OpenAPI 3.x / Swagger 2.0 の JSON。ファイルパスまたはURL）")
     p.add_argument("--name", help="サーバ名（pinのファイル名に使う）")
     p.add_argument("--token-env", help="アクセストークンを入れた環境変数名（値を直接渡さない）")
 
@@ -88,7 +91,8 @@ def cmd_monitor(a):
         targets = [{"url": a.url, "snapshot": a.snapshot, "name": a.name, "token_env": a.token_env}]
     changed, lines = False, ["# MCP接続先 定期監視レポート", ""]
     for t in targets:
-        ns = argparse.Namespace(url=t.get("url"), snapshot=t.get("snapshot"), name=t.get("name"), token_env=t.get("token_env"))
+        ns = argparse.Namespace(url=t.get("url"), snapshot=t.get("snapshot"), openapi=t.get("openapi"),
+                                name=t.get("name"), token_env=t.get("token_env"))
         try:
             snap = _snapshot(ns)
         except FetchError as e:
@@ -149,8 +153,8 @@ def main(argv=None) -> int:
 
     s = sub.add_parser("monitor", help="固定した定義との差分を監視する（変更ありで終了コード2）")
     g = s.add_mutually_exclusive_group(required=True)
-    g.add_argument("--targets", help="監視対象一覧JSON [{name,url,token_env} or {name,snapshot}]")
-    g.add_argument("--url"); g.add_argument("--snapshot")
+    g.add_argument("--targets", help="監視対象一覧JSON [{name,url,token_env} / {name,snapshot} / {name,openapi}]")
+    g.add_argument("--url"); g.add_argument("--snapshot"); g.add_argument("--openapi")
     s.add_argument("--name"); s.add_argument("--token-env")
     s.add_argument("--pins", required=True)
     s.add_argument("--out", "-o")

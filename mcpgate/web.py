@@ -10,6 +10,7 @@ import shutil
 import tempfile
 
 from .checks.rugpull import pin_path, save_pin
+from .openapi import OpenAPIError, is_openapi, to_snapshot
 from .report import to_json, to_markdown
 from .rubric import evaluate
 
@@ -83,3 +84,17 @@ def run_json(snapshot_text, questionnaire_text="", inventory_json="[]", pin_text
         return json.dumps({"ok": False, "error": str(e)}, ensure_ascii=False)
     except Exception as e:  # noqa: BLE001
         return json.dumps({"ok": False, "error": f"審査中にエラーが発生しました: {type(e).__name__}: {e}"}, ensure_ascii=False)
+
+
+def openapi_json(text: str) -> str:
+    """ブラウザ版：OpenAPI/Swagger の JSON をスナップショットに変換して返す（失敗時は error）。"""
+    try:
+        spec = json.loads(text)
+    except json.JSONDecodeError as e:
+        return json.dumps({"ok": False, "error": f"JSONとして読めません（{e.lineno}行目）。YAMLの仕様書はJSONに変換してから読み込んでください"}, ensure_ascii=False)
+    if not is_openapi(spec):
+        return json.dumps({"ok": False, "not_openapi": True}, ensure_ascii=False)
+    try:
+        return json.dumps({"ok": True, "snapshot": to_snapshot(spec)}, ensure_ascii=False)
+    except OpenAPIError as e:
+        return json.dumps({"ok": False, "error": str(e)}, ensure_ascii=False)

@@ -15,8 +15,8 @@ LLM = ["LLM01"]            # プロンプトインジェクション
 
 # (ルールID, 正規表現, 重み, 説明)
 RULES = [
-    ("override_en", r"\b(ignore|disregard|forget)\s+(all\s+)?(the\s+)?(previous|prior|above|earlier)\s+(instructions?|prompts?|rules?)", 6, "既存の指示を無視させる命令"),
-    ("override_ja", r"(以前|前|上記|これまで)の(指示|命令|ルール).{0,8}(無視|忘れ|従わ)", 6, "既存の指示を無視させる命令"),
+    ("override_en", r"\b(ignore|disregard|forget)\s+(all\s+)?(the\s+)?(previous|prior|above|earlier)\s+(instructions?|prompts?|rules?)", 8, "既存の指示を無視させる命令"),
+    ("override_ja", r"(以前|前|上記|これまで)の(指示|命令|ルール).{0,8}(無視|忘れ|従わ)", 8, "既存の指示を無視させる命令"),
     ("secrecy_en", r"\b(do\s*n[o']t|never|without)\s+(tell|inform|mention|reveal|notify|showing)\w*\s+(it\s+|this\s+)?(to\s+)?the\s+user", 6, "ユーザーへの秘匿指示"),
     ("secrecy_ja", r"ユーザー?(に|へ)(は)?(伝え|知らせ|言わ|表示し|報告し)(ない|ず|るな)", 6, "ユーザーへの秘匿指示"),
     ("tag_marker", r"<\s*/?\s*(important|system|instructions?|admin|secret)\s*>", 4, "モデル向けの強調タグ"),

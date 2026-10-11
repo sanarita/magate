@@ -37,11 +37,12 @@ def check_auth(snapshot: dict, q: dict) -> list[Finding]:
     elif method == "api_key":
         f.append(Finding("auth", WARN, "静的APIキー方式です（ユーザー単位の権限分離・失効が難しい）", ASI_ID, LLM,
                          condition="キーの保管場所（Key Vault等）・ローテーション周期・利用者範囲を定めること"))
-    elif method is None and not prm:
+    elif method is None and not prm and not obs.get("api_auth_schemes"):
         f.append(Finding("auth", UNKNOWN, "認証方式が不明です", ASI_ID, LLM, condition="提供元に認証方式を確認すること"))
 
     # --- OAuth メタデータ（MCP認可仕様：RFC 9728 / RFC 8414 / PKCE） ---
-    if method == "oauth2.1" or prm:
+    is_api = snapshot["server"].get("source") == "openapi"
+    if (method == "oauth2.1" or prm) and not is_api:  # RFC 9728 のメタデータは MCP サーバ向けの要件
         if not prm:
             f.append(Finding("auth", WARN, "OAuth方式だが Protected Resource Metadata（RFC 9728）が取得できません", ASI_ID, LLM,
                              condition="提供元にMCP認可仕様準拠状況を確認すること"))
@@ -65,11 +66,36 @@ def check_auth(snapshot: dict, q: dict) -> list[Finding]:
                 f.append(Finding("auth", WARN, f"非推奨のグラントタイプが有効です: {', '.join(sorted(bad))}", ASI_ID, LLM,
                                  condition="当該グラントを使わない設定でのみ接続すること"))
 
+    # --- OpenAPI 仕様書から読み取った認証方式 ---
+    if snapshot["server"].get("source") == "openapi":
+        f.extend(_openapi_auth(obs))
+
     # --- 混乱した代理・トークン中継（外から見えないので回答で判定） ---
     f.extend(check_confused_deputy(q))
     if not f:
         f.append(Finding("auth", OK, "認証方式に問題は見つかりませんでした", ASI_ID, LLM))
     return f
+
+
+def _openapi_auth(obs: dict) -> list[Finding]:
+    kinds, flows = obs.get("api_auth_schemes") or [], obs.get("api_oauth_flows") or []
+    out = []
+    if not kinds:
+        out.append(Finding("auth", WARN, "API仕様書に認証方式の定義がありません", ASI_ID, LLM,
+                           condition="認証なしで使えるAPIか、仕様書の記載漏れかを提供元に確認すること"))
+    if "basic" in kinds:
+        out.append(Finding("auth", WARN, "API仕様書にBasic認証（ID・パスワード）が定義されています", ASI_ID, LLM,
+                           condition="共有アカウントのパスワードを生成AIの接続に使わないこと"))
+    if "api_key" in kinds:
+        out.append(Finding("auth", WARN, "API仕様書にAPIキー認証が定義されています（利用者ごとの権限分離・失効が難しい）", ASI_ID, LLM,
+                           condition="キーの保管場所・ローテーション周期・利用者範囲を定めること"))
+    bad = {"implicit", "password"} & set(flows)
+    if bad:
+        out.append(Finding("auth", WARN, f"非推奨のOAuthフローが定義されています: {', '.join(sorted(bad))}", ASI_ID, LLM,
+                           condition="authorizationCode（PKCE付き）フローで接続すること"))
+    if obs.get("https") is False:
+        out.append(Finding("auth", FAIL, "API仕様書の接続先がHTTPSではありません", ASI_ID, LLM))
+    return out
 
 
 def check_confused_deputy(q: dict) -> list[Finding]:

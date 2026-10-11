@@ -1,0 +1,120 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "Patent Search API（架空）",
+    "version": "1.2.0",
+    "description": "公開特許公報を検索するAPI（サンプル）"
+  },
+  "servers": [
+    {
+      "url": "https://api.patent.example/v1"
+    }
+  ],
+  "paths": {
+    "/patents": {
+      "get": {
+        "operationId": "searchPatents",
+        "summary": "特許を検索する",
+        "description": "キーワード・IPC分類で公開特許公報を検索し、公開番号と要約の一覧を返します。",
+        "parameters": [
+          {
+            "name": "q",
+            "in": "query",
+            "required": true,
+            "description": "検索キーワード",
+            "schema": {
+              "type": "string",
+              "maxLength": 500
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "maximum": 50
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PatentList"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "oauth": [
+              "patents.read"
+            ]
+          }
+        ]
+      }
+    },
+    "/patents/{number}": {
+      "get": {
+        "operationId": "getPatent",
+        "summary": "特許の詳細を取得する",
+        "parameters": [
+          {
+            "name": "number",
+            "in": "path",
+            "required": true,
+            "description": "公開番号",
+            "schema": {
+              "type": "string",
+              "maxLength": 20
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "PatentList": {
+        "type": "array",
+        "items": {
+          "$ref": "#/components/schemas/Patent"
+        }
+      },
+      "Patent": {
+        "type": "object",
+        "properties": {
+          "number": {
+            "type": "string"
+          },
+          "abstract": {
+            "type": "string",
+            "description": "要約"
+          }
+        }
+      }
+    },
+    "securitySchemes": {
+      "oauth": {
+        "type": "oauth2",
+        "flows": {
+          "authorizationCode": {
+            "authorizationUrl": "https://auth.patent.example/authorize",
+            "tokenUrl": "https://auth.patent.example/token",
+            "scopes": {
+              "patents.read": "特許の参照"
+            }
+          }
+        }
+      }
+    }
+  }
+}

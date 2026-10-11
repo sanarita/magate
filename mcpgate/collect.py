@@ -14,7 +14,7 @@ import urllib.parse
 import urllib.request
 
 PROTOCOL_VERSION = "2025-11-25"
-UA = "mcp-gate/0.1 (+security review; read-only)"
+UA = "mcp-gate/0.3 (+security review; read-only)"
 TIMEOUT = 20
 
 
@@ -137,7 +137,7 @@ def fetch_http(url: str, token: str | None = None, name: str | None = None) -> d
     init = s.call("initialize", {
         "protocolVersion": PROTOCOL_VERSION,
         "capabilities": {},
-        "clientInfo": {"name": "mcp-gate", "version": "0.1.0"},
+        "clientInfo": {"name": "mcp-gate", "version": "0.3.0"},
     }, initialized=False)
     obs = {"https": url.lower().startswith("https://"), "token_supplied": bool(token)}
     tools, server_info = [], {}
@@ -178,4 +178,30 @@ def load_snapshot(path: str) -> dict:
     snap.setdefault("observations", {})
     snap.setdefault("oauth", {"protected_resource": None, "authorization_server": None})
     snap.setdefault("tools", [])
+    return snap
+
+
+def load_openapi(path_or_url: str, name: str | None = None) -> dict:
+    """OpenAPI/Swagger の仕様書（JSON）を読み込んでスナップショットにする。
+
+    URL の場合は仕様書ファイルを1回ダウンロードするだけで、API そのものは呼び出さない。
+    """
+    from .openapi import OpenAPIError, to_snapshot
+    if path_or_url.lower().startswith(("http://", "https://")):
+        status, _, text = _http(path_or_url, headers={"Accept": "application/json"})
+        if status != 200:
+            raise FetchError(f"仕様書を取得できません（HTTP {status}）: {path_or_url}")
+    else:
+        with open(path_or_url, encoding="utf-8-sig") as f:
+            text = f.read()
+    try:
+        spec = json.loads(text)
+    except json.JSONDecodeError:
+        raise FetchError("仕様書がJSONではありません。YAMLの場合はJSONに変換してから指定してください") from None
+    try:
+        snap = to_snapshot(spec, name)
+    except OpenAPIError as e:
+        raise FetchError(str(e)) from None
+    snap["server"]["fetched_at"] = _dt.datetime.now(_dt.timezone.utc).isoformat(timespec="seconds")
+    snap["server"]["spec_location"] = path_or_url
     return snap

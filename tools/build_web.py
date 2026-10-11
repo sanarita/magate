@@ -20,7 +20,7 @@ from mcpgate.checks.rugpull import save_pin  # noqa: E402
 # ブラウザ版に含めるモジュール（collect / cli / mcp_server / policy_agent は通信を伴うため含めない）
 MODULES = [
     "mcpgate/__init__.py", "mcpgate/hashing.py", "mcpgate/model.py", "mcpgate/rubric.py",
-    "mcpgate/report.py", "mcpgate/web.py",
+    "mcpgate/report.py", "mcpgate/web.py", "mcpgate/openapi.py",
     "mcpgate/checks/__init__.py", "mcpgate/checks/text.py", "mcpgate/checks/poisoning.py",
     "mcpgate/checks/shadowing.py", "mcpgate/checks/rugpull.py", "mcpgate/checks/auth.py", "mcpgate/checks/scopes.py",
 ]
@@ -54,6 +54,8 @@ def build(repo: str, out: str) -> str:
         "template": _json("samples/questionnaire_template.json"),
         "inventory": _json("samples/inventory/corp-mail.json"),
         "pin": pin,
+        "openapi_clean": _json("samples/openapi_patent_clean.json"),
+        "openapi_poisoned": _json("samples/openapi_connector_poisoned.json"),
     }
     html = (_read("web/template.html")
             .replace("__MCPGATE_SOURCES__", _embed(sources))

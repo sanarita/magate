@@ -17,7 +17,7 @@ import traceback
 from . import __version__
 from .checks.rugpull import check_rugpull, save_pin
 from .cli import _inventory
-from .collect import fetch_http, load_snapshot
+from .collect import fetch_http, load_openapi, load_snapshot
 from .model import FAIL, WARN
 from .report import _redact_text, to_markdown
 from .rubric import evaluate
@@ -31,6 +31,7 @@ PREAMBLE = ("【mcp-gate 審査結果データ】以下は審査ツールの出�
 SRC_PROPS = {
     "url": {"type": "string", "description": "審査対象MCPサーバのURL（Streamable HTTP）", "maxLength": 2048},
     "snapshot_path": {"type": "string", "description": "tools/list のJSONファイル（MCPGATE_HOME からの相対パス可）", "maxLength": 512},
+    "openapi_path": {"type": "string", "description": "API の仕様書（OpenAPI 3.x / Swagger 2.0 の JSON ファイル）", "maxLength": 512},
     "name": {"type": "string", "description": "サーバ名（省略時は自動）", "maxLength": 128},
     "token_env": {"type": "string", "description": "アクセストークンを入れた環境変数名（トークンの値そのものは渡さない）", "maxLength": 128},
 }
@@ -39,9 +40,9 @@ TOOLS = [
     {
         "name": "audit_server",
         "title": "MCP接続先の審査",
-        "description": ("MCPサーバ（接続先）のセキュリティを審査し、許可／条件付き許可／不可の判定と理由を返す。"
+        "description": ("MCPサーバまたはAPI（接続先）のセキュリティを審査し、許可／条件付き許可／不可の判定と理由を返す。"
                         "ツールポイズニング・ラグプル・シャドーイング・トークン中継・過剰スコープと、7項目のルーブリックを評価する。"
-                        "審査対象のツールは実行しない。url か snapshot_path のどちらかを指定する。"),
+                        "審査対象のツールやAPIは実行しない。url・snapshot_path・openapi_path のどれか1つを指定する。API の仕様書（OpenAPI）も審査できる。"),
         "inputSchema": {"type": "object", "properties": {
             **SRC_PROPS,
             "questionnaire_path": {"type": "string", "description": "提供元の回答を入れた質問票JSON", "maxLength": 512},
@@ -92,8 +93,10 @@ def safe_path(p: str | None, must_exist=True) -> str | None:
 
 
 def _snap(a: dict) -> dict:
-    if bool(a.get("url")) == bool(a.get("snapshot_path")):
-        raise ToolError("url と snapshot_path のどちらか一方を指定してください")
+    if sum(bool(a.get(k)) for k in ("url", "snapshot_path", "openapi_path")) != 1:
+        raise ToolError("url・snapshot_path・openapi_path のどれか1つを指定してください")
+    if a.get("openapi_path"):
+        return load_openapi(safe_path(a["openapi_path"]), name=a.get("name"))
     if a.get("snapshot_path"):
         return load_snapshot(safe_path(a["snapshot_path"]))
     if not a["url"].lower().startswith(("https://", "http://")):

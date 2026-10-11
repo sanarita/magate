@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>mcp-gate｜MCP接続先の審査</title>
+<title>mcp-gate｜MCP・API接続先の審査</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&family=Shippori+Mincho+B1:wght@600;800&display=swap" rel="stylesheet">
@@ -125,8 +125,8 @@ details.more textarea{margin-top:8px;min-height:70px}
 <body>
 <div class="wrap">
   <header>
-    <h1>MCP接続先の審査</h1>
-    <p class="lede">生成AIを社外のMCPサーバにつなぐ前に、ツール定義と提供元の回答から、許可・条件付き許可・不可を判定します。</p>
+    <h1>MCP・API接続先の審査</h1>
+    <p class="lede">生成AIを社外のMCPサーバやAPIにつなぐ前に、ツール定義・API仕様書と提供元の回答から、許可・条件付き許可・不可を判定します。</p>
     <p class="privacy">入力した内容はこのブラウザの中だけで処理され、どこにも送信されません。審査対象のサーバにもアクセスしません。外部との通信は、解析エンジン（Pyodide）と文字フォントの読み込みだけです。</p>
   </header>
 
@@ -134,17 +134,17 @@ details.more textarea{margin-top:8px;min-height:70px}
     <section aria-labelledby="in-h">
       <h2 id="in-h">入力情報</h2>
       <ol class="howto">
-        <li>接続先のツール名と説明文を貼る</li>
+        <li>接続先のツール名と説明文を貼る（API仕様書のJSONがあれば読み込む）</li>
         <li>分かる範囲で質問票に答える（分からない項目は空欄のままでよい）</li>
         <li>「審査する」を押す</li>
       </ol>
 
       <div class="slot">
-        <div class="slot-head"><p class="slot-title">1. 接続先のツール</p><span class="req">必須</span></div>
+        <div class="slot-head"><p class="slot-title">1. 接続先のツール・API</p><span class="req">必須</span></div>
         <p class="help">提供元の資料やWebページに載っている、ツールの名前と説明文をそのまま貼り付けます。</p>
         <div class="grid2">
           <label>接続先の名前<input id="srv-name" type="text" placeholder="例：特許検索サービス" autocomplete="off"></label>
-          <label>URL（任意）<input id="srv-url" type="url" placeholder="https://…" autocomplete="off"></label>
+          <label>URL（任意・記録用）<input id="srv-url" type="url" placeholder="https://…" autocomplete="off"><span class="hint" style="display:block">この画面からURLへはアクセスしません</span></label>
         </div>
         <div id="tools"></div>
         <div class="row">
@@ -152,13 +152,15 @@ details.more textarea{margin-top:8px;min-height:70px}
           <button type="button" id="clear-tools">すべて消す</button>
         </div>
         <details class="more">
-          <summary>JSONファイルがある場合・サンプルで試す</summary>
-          <p class="help">提供元から tools/list のJSONを受け取っている場合は、こちらから読み込むと引数の説明まで検査できます。</p>
+          <summary>JSONファイルがある場合（MCPのツール一覧・APIのOpenAPI仕様書）・サンプルで試す</summary>
+          <p class="help">MCPサーバの tools/list のJSON、またはAPIの仕様書（OpenAPI 3.x／Swagger 2.0 のJSON、Copilot Studioのカスタムコネクタ定義を含む）を読み込めます。引数の説明まで検査し、APIは操作ごとに1行ずつ並びます。YAML形式の仕様書はJSONに変換してから読み込んでください。</p>
           <div class="row">
             <label class="filebtn">JSONファイルを選ぶ<input type="file" accept=".json,application/json" id="snap-file"></label>
             <button type="button" data-sample="clean">例：問題なし</button>
             <button type="button" data-sample="poisoned">例：汚染された定義</button>
             <button type="button" data-sample="rugpull">例：承認後に差し替え</button>
+            <button type="button" data-spec="openapi_poisoned">例：API仕様書（危険なコネクタ）</button>
+            <button type="button" data-spec="openapi_clean">例：API仕様書（問題なし）</button>
           </div>
           <label class="sr" for="snap-json">JSONを貼り付け</label>
           <textarea id="snap-json" spellcheck="false" placeholder="ここにJSONを貼り付けて「読み込む」"></textarea>
@@ -208,7 +210,7 @@ details.more textarea{margin-top:8px;min-height:70px}
     <section aria-labelledby="out-h">
       <h2 id="out-h">審査票</h2>
       <div class="sheet" id="sheet">
-        <p class="empty">左でツール名と説明文を入れて「審査する」を押すと、ここに判定が出ます。</p>
+        <p class="empty">左でツール名と説明文（またはAPI仕様書）を入れて「審査する」を押すと、ここに判定が出ます。</p>
         <p class="empty" style="margin-top:12px">まず動きを見たいときは、ここから試せます。</p>
         <div class="row">
           <button type="button" class="try" data-try="poisoned">汚染された定義を審査してみる</button>
@@ -288,6 +290,8 @@ details.more textarea{margin-top:8px;min-height:70px}
       const card = el("div", { class: "tool" },
         el("div", { class: "tool-head" }, el("label", {}, `ツール名（${i + 1}）`, name), del),
         el("label", {}, "説明文", desc));
+      const http = (t.annotations || {})["x-http"];
+      if (http) card.append(el("p", { class: "tag" }, `API操作：${http}${(t.annotations || {}).destructiveHint ? "（削除系）" : (t.annotations || {}).readOnlyHint === false ? "（書き込み系）" : "（参照系）"}`));
       const props = Object.keys(((t.inputSchema || {}).properties) || {});
       if (props.length) card.append(el("p", { class: "tag" }, `引数 ${props.length} 個の定義も読み込み済み（引数の説明文も検査します）`));
       box.append(card);
@@ -299,9 +303,16 @@ details.more textarea{margin-top:8px;min-height:70px}
   $("clear-tools").addEventListener("click", blank);
   document.querySelectorAll("button[data-sample]").forEach((b) => b.addEventListener("click", () => setSnap(SAMPLES[b.dataset.sample])));
   function loadSnapText(text) {
-    try { setSnap(JSON.parse(text)); $("err").hidden = true; }
-    catch (e) { showErr("JSONを読み込めませんでした：" + e.message); }
+    try {
+      if (!web) throw new Error("解析エンジンの準備ができるまでお待ちください");
+      const r = JSON.parse(web.openapi_json(text));        // まず API 仕様書（OpenAPI）として解釈
+      if (r.ok) setSnap(r.snapshot);
+      else if (r.not_openapi) setSnap(JSON.parse(text));     // MCP の tools/list として解釈
+      else throw new Error(r.error);
+      $("err").hidden = true;
+    } catch (e) { showErr("読み込めませんでした：" + e.message); }
   }
+  document.querySelectorAll("button[data-spec]").forEach((b) => b.addEventListener("click", () => loadSnapText(pretty(SAMPLES[b.dataset.spec]))));
   $("snap-file").addEventListener("change", async (ev) => { if (ev.target.files[0]) loadSnapText(await ev.target.files[0].text()); ev.target.value = ""; });
   $("snap-load").addEventListener("click", () => loadSnapText($("snap-json").value));
 
@@ -472,6 +483,8 @@ details.more textarea{margin-top:8px;min-height:70px}
     if (!tools.length) { showErr("ツール名と説明文を1つ以上入れてください。"); return; }
     const missing = tools.findIndex((t) => !(t.name || "").trim());
     if (missing >= 0) { showErr(`ツール${missing + 1}の名前が空欄です。`); return; }
+    const nodesc = tools.findIndex((t) => !(t.description || "").trim() && !Object.keys(((t.inputSchema || {}).properties) || {}).length);
+    if (nodesc >= 0) { showErr(`ツール${nodesc + 1}（${tools[nodesc].name}）の説明文が空欄です。審査するのは説明文の中身なので、提供元の資料から貼り付けてください。`); return; }
     const s = { ...snap, tools, server: { ...snap.server, name: snap.server.name || "名称未設定" } };
     const out = JSON.parse(web.run_json(JSON.stringify(s), JSON.stringify(getForm()), JSON.stringify(inventory.map((x) => x.text)), pinText));
     if (!out.ok) { showErr(out.error); return; }
@@ -538,7 +551,7 @@ details.more textarea{margin-top:8px;min-height:70px}
         btn("レポートを保存（.md）", () => download(`${base}-report.md`, last.markdown, "text/markdown")),
         btn("結果を保存（.json）", () => download(`${base}-result.json`, pretty(last.result))),
         btn("承認用に定義を固定（.pin.json）", () => download(last.pin_filename, last.new_pin))),
-      el("p", { class: "note" }, "固定ハッシュは、承認が決まった後に保存してください。次回この画面の「承認時の固定ハッシュ」に入れると、定義の書き換えを照合できます。")));
+      el("p", { class: "note" }, "固定ハッシュは、承認が決まった後に保存してください。次回この画面の「4. 承認したときの記録」に入れると、定義の書き換えを照合できます。")));
     sheet.querySelector("h3")?.scrollIntoView({ behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth", block: "nearest" });
   }
   buildForm(); blank();

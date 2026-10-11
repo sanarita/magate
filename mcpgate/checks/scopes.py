@@ -44,6 +44,11 @@ def check_scopes(snapshot: dict, q: dict) -> list[Finding]:
     if supported and all(BROAD.search(s) for s in supported):
         f.append(Finding("oauth_scope", WARN, "サーバが広いスコープしか用意していません（細かい権限分離ができない）", ASI, LLM,
                          evidence=", ".join(sorted(supported))))
+    declared = (snapshot.get("observations") or {}).get("api_declared_scopes") or []
+    broad = [s for s in declared if BROAD.search(s)]
+    if broad and not requested:
+        f.append(Finding("oauth_scope", WARN, f"API仕様書に広い権限のスコープが定義されています: {', '.join(f'`{x}`' for x in broad)}", ASI, LLM,
+                         condition="接続時に要求するスコープを業務に必要なものだけに絞り、質問票に記入すること"))
     if not f:
         f.append(Finding("oauth_scope", OK, "スコープは最小権限の範囲に収まっています" if requested else
                          "要求スコープの申告なし（OAuthを使わない、または未記入）", ASI, LLM))

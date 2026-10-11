@@ -60,8 +60,10 @@ def to_markdown(r: Result, redact: bool = False) -> str:
 def _to_markdown(r: Result, redact: bool = False) -> str:
     s = r.server
     name = _SAFE_NAME.sub("_", str(s.get("name")))[:64] if redact else s.get("name")
-    L = [f"# MCP接続先 審査レポート：{name}", "",
+    kind = "API" if s.get("source") == "openapi" else "MCP"
+    L = [f"# {kind}接続先 審査レポート：{name}", "",
          f"- 接続先URL：`{s.get('url') or '（スナップショット入力）'}`",
+         *([f"- 審査対象：API仕様書（{'OpenAPI ' if not str(s.get('spec_version','')).startswith('2') else 'Swagger '}{s.get('spec_version')}、API版数 {s.get('api_version') or '-'}）"] if s.get("source") == "openapi" else []),
          f"- 取得日時：{s.get('fetched_at', '-')}",
          f"- 判定ツール：mcp-gate（自動判定＋提供元回答に基づく。最終承認は人が行う）", "",
          f"## 総合判定：{VERDICT_ICON[r.verdict]}", ""]
