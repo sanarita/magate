@@ -90,6 +90,21 @@ class TestRugPull(unittest.TestCase):
         self.assertEqual(check_rugpull(load_snapshot(S("patent_clean.json")), None)[0].status, UNKNOWN)
 
 
+class TestConditionWording(unittest.TestCase):
+    def test_poisoning_warn_condition_names_the_reason(self):
+        snap = load_snapshot(S("patent_clean.json"))
+        snap["tools"][1]["description"] += "\u200b"  # 不可視文字だけを仕込む（汚染サンプルと同じ形）
+        fs = [f for f in check_poisoning(snap) if f.status == WARN]
+        self.assertEqual(len(fs), 1)
+        self.assertIn("不可視文字", fs[0].condition)
+        self.assertIn("get_patent_detail", fs[0].condition)
+
+    def test_free_text_condition_names_the_parameter(self):
+        snap = load_snapshot(S("patent_poisoned.json"))
+        res = evaluate(snap, q())
+        self.assertTrue(any("search_patents.note" in c and "DLP" in c for c in res.conditions))
+
+
 class TestAuthAndScopes(unittest.TestCase):
     def test_token_passthrough_fails(self):
         qq = q(); qq["auth"]["token_passthrough"] = True

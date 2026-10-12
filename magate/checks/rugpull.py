@@ -11,6 +11,11 @@ from ..model import FAIL, OK, UNKNOWN, WARN, Finding
 ASI = ["ASI04"]
 LLM = ["LLM03"]  # サプライチェーン
 
+# ブラウザ版（web.py）はこの2つをブラウザの操作に合わせた文面に差し替える
+NO_PIN_MESSAGE = "固定ハッシュの保存先が未指定のため、ラグプル監視は未設定です"
+NO_PIN_CONDITION = "承認時に `magate pin` で定義を固定し、定期監視を設定すること"
+FIRST_AUDIT_MESSAGE = "初回審査（固定済みの定義なし）。承認後に `pin` で固定してください"
+
 
 def pin_path(pins_dir: str, server_name: str) -> str:
     safe = re.sub(r"[^\w.-]", "_", server_name)
@@ -54,11 +59,10 @@ def diff(pin: dict, snapshot: dict) -> dict:
 
 def check_rugpull(snapshot: dict, pins_dir: str | None) -> list[Finding]:
     if not pins_dir:
-        return [Finding("rug_pull", UNKNOWN, "固定ハッシュの保存先が未指定のため、ラグプル監視は未設定です", ASI, LLM,
-                        condition="承認時に `magate pin` で定義を固定し、定期監視を設定すること")]
+        return [Finding("rug_pull", UNKNOWN, NO_PIN_MESSAGE, ASI, LLM, condition=NO_PIN_CONDITION)]
     pin = load_pin(pins_dir, snapshot["server"]["name"])
     if pin is None:
-        return [Finding("rug_pull", OK, "初回審査（固定済みの定義なし）。承認後に `pin` で固定してください", ASI, LLM)]
+        return [Finding("rug_pull", OK, FIRST_AUDIT_MESSAGE, ASI, LLM)]
     d = diff(pin, snapshot)
     if d["unchanged"]:
         return [Finding("rug_pull", OK, "承認時のツール定義から変更はありません", ASI, LLM)]

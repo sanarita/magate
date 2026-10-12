@@ -59,13 +59,15 @@ def check_poisoning(snapshot: dict, extra_scanners=()) -> list[Finding]:
     """extra_scanners: callable(text) -> list[(rule_id, weight, label, snippet)] を追加で差し込める。"""
     findings = []
     for tool in snapshot.get("tools", []):
-        score, details = 0, []
+        score, details, labels = 0, [], []
         for where, text in iter_texts(tool):
             hits = scan_text(text)
             for sc in extra_scanners:
                 hits.extend(sc(text))
             for rid, w, label, snip in hits:
                 score += w
+                if label not in labels:
+                    labels.append(label)
                 details.append(f"[{rid} +{w}] {label} @ {where}: 「{snip}」")
         if score >= FAIL_SCORE:
             status = FAIL
@@ -77,7 +79,8 @@ def check_poisoning(snapshot: dict, extra_scanners=()) -> list[Finding]:
             threat="tool_poisoning", status=status, asi=ASI, llm=LLM,
             message=f"ツール `{tool.get('name')}` の定義にモデル向けの命令らしき記述があります（スコア {score}）",
             evidence="\n".join(details),
-            condition=f"`{tool.get('name')}` を無効化するか、提供元に説明文の修正を求めること" if status == WARN else "",
+            condition=(f"`{tool.get('name')}` に{'・'.join(f'「{x}」' for x in labels[:3])}{'など' if len(labels) > 3 else ''}が見つかったため、"
+                       "無効化するか、提供元に説明文の修正を求めること") if status == WARN else "",
         ))
     if not findings:
         findings.append(Finding("tool_poisoning", OK, "ツール定義に命令の埋め込みは検出されませんでした", ASI, LLM))

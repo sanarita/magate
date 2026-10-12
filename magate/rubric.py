@@ -101,7 +101,7 @@ def eval_data(snapshot, q) -> list[Finding]:
             and re.search(r"(content|body|text|document|file|context|note|message|data)", p, re.I)]
     if free:
         out.append(Finding("data", WARN, f"長さ無制限の自由記述パラメータがあり、意図しない大量送信が起こりえます: {', '.join(free)}", asi, llm,
-                           condition="DLP・ゲートウェイで送信内容を監視すること"))
+                           condition=f"{', '.join(free)} は長さの上限がないため、DLP・ゲートウェイで送信内容を監視すること"))
     if not out:
         out.append(Finding("data", OK, f"送信データは上限（{CLASS_JA.get(allowed, allowed)}）の範囲内です", asi, llm))
     return out

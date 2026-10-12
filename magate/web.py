@@ -9,7 +9,7 @@ import os
 import shutil
 import tempfile
 
-from .checks.rugpull import pin_path, save_pin
+from .checks.rugpull import FIRST_AUDIT_MESSAGE, NO_PIN_CONDITION, NO_PIN_MESSAGE, pin_path, save_pin
 from .openapi import OpenAPIError, is_openapi, to_snapshot
 from .report import to_json, to_markdown
 from .rubric import evaluate
@@ -17,6 +17,24 @@ from .rubric import evaluate
 
 class InputError(ValueError):
     pass
+
+
+# CLIのコマンドを案内する文面を、ブラウザ版の操作に置き換える
+BROWSER_TEXT = {
+    NO_PIN_MESSAGE: "承認したときの記録（.pin.json）が未指定のため、承認後の書き換えは照合していません",
+    NO_PIN_CONDITION: "承認が決まったら「承認用に定義を固定（.pin.json）」で保存し、次回の審査で「4. 承認したときの記録」に入れて照合すること",
+    FIRST_AUDIT_MESSAGE: "初回審査（照合する記録なし）。承認が決まったら「承認用に定義を固定（.pin.json）」で保存してください",
+}
+
+
+def _for_browser(res):
+    for it in res.items:
+        for f in it.findings:
+            f.message = BROWSER_TEXT.get(f.message, f.message)
+            f.condition = BROWSER_TEXT.get(f.condition, f.condition)
+    res.conditions = [BROWSER_TEXT.get(c, c) for c in res.conditions]
+    res.blockers = [BROWSER_TEXT.get(b, b) for b in res.blockers]
+    return res
 
 
 def _parse(text: str, label: str):
@@ -60,7 +78,7 @@ def run(snapshot_text: str, questionnaire_text: str = "", inventory_texts: list[
             # 照合は審査対象のサーバ名で行う
             with open(pin_path(pins_dir, snap["server"]["name"]), "w", encoding="utf-8") as f:
                 json.dump(pin, f, ensure_ascii=False)
-        res = evaluate(snap, q, inv, pins_dir)
+        res = _for_browser(evaluate(snap, q, inv, pins_dir))
         new_pin_dir = os.path.join(work, "newpin")
         with open(save_pin(new_pin_dir, snap, approved_by="", note="ブラウザ版で作成。承認後に承認者を記入して保存すること"),
                   encoding="utf-8") as f:

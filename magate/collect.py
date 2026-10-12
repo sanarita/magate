@@ -13,8 +13,10 @@ import urllib.error
 import urllib.parse
 import urllib.request
 
+from . import __version__
+
 PROTOCOL_VERSION = "2025-11-25"
-UA = "magate/0.4 (+security review; read-only)"
+UA = f"magate/{__version__} (+security review; read-only)"
 TIMEOUT = 20
 
 
@@ -151,7 +153,7 @@ def fetch_http(url: str, token: str | None = None, name: str | None = None) -> d
     init = s.call("initialize", {
         "protocolVersion": PROTOCOL_VERSION,
         "capabilities": {},
-        "clientInfo": {"name": "magate", "version": "0.3.0"},
+        "clientInfo": {"name": "magate", "version": __version__},
     }, initialized=False)
     obs = {"https": url.lower().startswith("https://"), "token_supplied": bool(token)}
     tools, server_info = [], {}

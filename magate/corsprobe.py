@@ -10,6 +10,7 @@ import json
 import urllib.error
 import urllib.request
 
+from . import __version__
 from .collect import PROTOCOL_VERSION, UA, _parse_sse
 
 DEFAULT_ORIGIN = "https://sanarita.github.io"
@@ -85,7 +86,7 @@ def probe(url: str, origin: str = DEFAULT_ORIGIN) -> dict:
             return done("不可（CORS）")
         status, h, msg = _post(url, origin, {}, {"jsonrpc": "2.0", "id": 1, "method": "initialize", "params": {
             "protocolVersion": PROTOCOL_VERSION, "capabilities": {},
-            "clientInfo": {"name": "magate-cors-check", "version": "0.3.0"}}})
+            "clientInfo": {"name": "magate-cors-check", "version": __version__}}})
         if not origin_allowed(h, origin):
             steps.append(f"接続開始: HTTP {status}、応答に Access-Control-Allow-Origin がない")
             return done("不可（CORS：応答がブラウザに渡らない）")
