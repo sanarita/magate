@@ -114,9 +114,11 @@ class TestReportAndEntrances(unittest.TestCase):
         res = run(json.dumps(s), json.dumps(out["questionnaire"]))
         self.assertTrue(all(x["status"] == MATCHES for x in res["result"]["autofill"]["items"]))
         self.assertIn("提供元の公開情報", res["markdown"])
-        # 審査時は空欄を勝手に埋めない（画面の表示と結果がずれないように）
+        # ボタンを押さずに審査しても、空欄の提供元側の項目は埋めて、埋めた質問票を画面に返す
         res = run(json.dumps(s), "{}")
-        self.assertEqual(res["result"]["autofill"]["items"], [])
+        self.assertEqual(res["result"]["autofill"]["items"][0]["status"], FILLED)
+        self.assertEqual(res["questionnaire"]["operator"]["name"], "Box, Inc.")
+        self.assertNotIn("運営主体（法人名）を特定すること", res["result"]["conditions"])
 
     def test_cli_autofill_and_opt_out(self):
         with tempfile.TemporaryDirectory() as d:

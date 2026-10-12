@@ -41,6 +41,8 @@ class Result:
 
 
 # ---------- 1. 運営主体の実在性 ----------
+VERIFY_CONDITION = "国税庁 法人番号公表サイト等で実在を確認し verified_by_human を true にすること"  # ブラウザ版は web.py で言い換える
+
 def corporate_number_valid(num: str) -> bool:
     """日本の法人番号（13桁）のチェックデジット検証。"""
     if not re.fullmatch(r"\d{13}", num or ""):
@@ -72,7 +74,7 @@ def eval_operator(snapshot, q) -> list[Finding]:
                            condition="セキュリティ窓口を確認すること"))
     if not o.get("verified_by_human"):
         out.append(Finding("operator", WARN, "運営主体の実在確認が人手で完了していません", asi, llm,
-                           condition="国税庁 法人番号公表サイト等で実在を確認し verified_by_human を true にすること"))
+                           condition=VERIFY_CONDITION))
     if not out:
         out.append(Finding("operator", OK, f"運営主体 {o['name']} の実在を確認済み", asi, llm))
     return out

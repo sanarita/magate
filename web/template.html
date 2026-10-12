@@ -65,6 +65,7 @@ button:hover,.filebtn:hover{border-color:var(--muted)}
 .empty{color:var(--muted);margin:0}
 .sheet-head{display:grid;grid-template-columns:1fr auto;gap:20px;align-items:start;border-bottom:2px solid var(--ink);padding-bottom:18px;margin-bottom:22px}
 .server{font:600 22px/1.35 var(--serif);margin:0;word-break:break-all}
+.sheet{overflow-wrap:anywhere}.sheet a{word-break:break-all}.sheet-head>div{min-width:0}
 .meta{margin:4px 0 0;font-size:13px;color:var(--muted);word-break:break-all}
 .stamp{--c:var(--ai);width:132px;height:132px;border:4px double var(--c);border-radius:50%;display:grid;place-items:center;
   color:var(--c);font:800 26px/1.15 var(--serif);text-align:center;transform:rotate(-8deg);padding:8px}
@@ -614,6 +615,14 @@ code{font:12px var(--mono)}
     const s = { ...snap, tools, server: { ...snap.server, name: snap.server.name || "名称未設定" } };
     const out = JSON.parse(web.run_json(JSON.stringify(s), JSON.stringify(getForm()), JSON.stringify(inventory.map((x) => x.text)), pinText));
     if (!out.ok) { showErr(out.error); return; }
+    // 審査時に自動入力した項目を質問票に書き戻す
+    const filled = ((out.result.autofill || {}).items || []).filter((x) => x.status === "filled").length;
+    if (filled && out.questionnaire) {
+      setForm(out.questionnaire);
+      const card = out.result.autofill.card;
+      const msg = $("q-auto-msg"); msg.hidden = false;
+      msg.textContent = (card ? `情報カード「${card.title}」（確認日 ${card.checked}）` : "接続先の応答") + `から ${filled} 項目を自動入力して審査しました。根拠は審査票に表示されます。最終確認は人が行ってください。`;
+    }
     last = out; render(out);
   });
   function showErr(msg) { $("err").textContent = msg; $("err").hidden = false; }

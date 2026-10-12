@@ -10,6 +10,7 @@ import shutil
 import tempfile
 
 from .checks.rugpull import FIRST_AUDIT_MESSAGE, NO_PIN_CONDITION, NO_PIN_MESSAGE, pin_path, save_pin
+from .rubric import VERIFY_CONDITION
 from .openapi import OpenAPIError, is_openapi, to_snapshot
 from .autofill import autofill
 from .report import to_json, to_markdown
@@ -25,6 +26,7 @@ BROWSER_TEXT = {
     NO_PIN_MESSAGE: "承認したときの記録（.pin.json）が未指定のため、承認後の書き換えは照合していません",
     NO_PIN_CONDITION: "承認が決まったら「承認用に定義を固定（.pin.json）」で保存し、次回の審査で「4. 承認したときの記録」に入れて照合すること",
     FIRST_AUDIT_MESSAGE: "初回審査（照合する記録なし）。承認が決まったら「承認用に定義を固定（.pin.json）」で保存してください",
+    VERIFY_CONDITION: "国税庁 法人番号公表サイト等で会社の実在を確認し、質問票の「会社の実在を自分で確認した」にチェックすること",
 }
 
 
@@ -79,7 +81,8 @@ def run(snapshot_text: str, questionnaire_text: str = "", inventory_texts: list[
             # 照合は審査対象のサーバ名で行う
             with open(pin_path(pins_dir, snap["server"]["name"]), "w", encoding="utf-8") as f:
                 json.dump(pin, f, ensure_ascii=False)
-        _, info = autofill(snap, q, fill=False)  # ブラウザ版は画面で入力済みの値を照合だけする
+        # 空欄の提供元側の項目は情報カード・接続先の応答で埋める。埋めた質問票は画面に書き戻す（表示と結果をそろえる）
+        q, info = autofill(snap, q, fill=True)
         res = _for_browser(evaluate(snap, q, inv, pins_dir, autofill=info))
         new_pin_dir = os.path.join(work, "newpin")
         with open(save_pin(new_pin_dir, snap, approved_by="", note="ブラウザ版で作成。承認後に承認者を記入して保存すること"),
@@ -89,6 +92,7 @@ def run(snapshot_text: str, questionnaire_text: str = "", inventory_texts: list[
             "ok": True,
             "result": json.loads(to_json(res)),
             "markdown": to_markdown(res),
+            "questionnaire": q,
             "new_pin": new_pin,
             "pin_filename": os.path.basename(pin_path("", snap["server"]["name"])),
         }

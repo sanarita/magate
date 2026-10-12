@@ -21,3 +21,4 @@ class TestBrowserWording(unittest.TestCase):
         self.assertNotIn("magate pin", text)
         self.assertNotIn("`pin`", text)
         self.assertTrue(any("承認用に定義を固定（.pin.json）" in c for c in out["result"]["conditions"]))
+        self.assertNotIn("verified_by_human", text)
