@@ -37,6 +37,7 @@ class Result:
     verdict: str
     conditions: list[str]
     blockers: list[str]
+    autofill: dict = field(default_factory=dict)  # 情報カード・接続先の応答から自動入力／照合した項目
 
 
 # ---------- 1. 運営主体の実在性 ----------
@@ -179,7 +180,7 @@ THREAT_LABELS = {
 }
 
 
-def evaluate(snapshot: dict, q: dict, inventory=(), pins_dir=None, extra_scanners=()) -> Result:
+def evaluate(snapshot: dict, q: dict, inventory=(), pins_dir=None, extra_scanners=(), autofill: dict | None = None) -> Result:
     poison = check_poisoning(snapshot, extra_scanners)
     shadow = check_shadowing(snapshot, list(inventory))
     rug = check_rugpull(snapshot, pins_dir)
@@ -207,4 +208,4 @@ def evaluate(snapshot: dict, q: dict, inventory=(), pins_dir=None, extra_scanner
                 if c not in conditions:
                     conditions.append(c)
     verdict = DENY if blockers else (CONDITIONAL if conditions else PERMIT)
-    return Result(snapshot["server"], items, threats, verdict, conditions, blockers)
+    return Result(snapshot["server"], items, threats, verdict, conditions, blockers, autofill or {})

@@ -70,7 +70,12 @@ def cmd_audit(a):
     if a.questionnaire:
         with open(a.questionnaire, encoding="utf-8") as f:
             q = json.load(f)
-    res = evaluate(snap, q, _inventory(a.inventory), a.pins)
+    from .autofill import autofill
+    q, info = autofill(snap, q, fill=not a.no_autofill)
+    if info.get("items"):
+        n = sum(1 for x in info["items"] if x["status"] == "filled")
+        print(f"情報カード：{(info.get('card') or {}).get('title', '接続先の応答')}（自動入力 {n} 項目）", file=sys.stderr)
+    res = evaluate(snap, q, _inventory(a.inventory), a.pins, autofill=info)
     _write(a.out, to_json(res) if a.json else to_markdown(res, redact=a.redact))
     print(f"総合判定: {res.verdict}", file=sys.stderr)
     return EXIT_DENY if res.verdict == DENY else EXIT_OK
@@ -161,6 +166,8 @@ def main(argv=None) -> int:
     s.add_argument("--json", action="store_true", help="JSONで出力")
     s.add_argument("--redact", action="store_true",
                    help="審査対象由来の抜粋を伏せ字にする（結果をClaudeやCopilotに貼り付けるとき用）")
+    s.add_argument("--no-autofill", action="store_true",
+                   help="情報カード・接続先の応答による質問票の自動入力をしない（照合は行う）")
     s.set_defaults(func=cmd_audit)
 
     s = sub.add_parser("pin", help="承認時点のツール定義を固定する")

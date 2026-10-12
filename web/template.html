@@ -187,11 +187,13 @@ code{font:12px var(--mono)}
         <p class="help">空欄の項目は「未確認」として扱われ、審査票の「対応が必要なこと」に表示されます。</p>
         <div id="qform"></div>
         <div class="row">
+          <button type="button" id="q-auto">提供元の公開情報で入力</button>
           <button type="button" id="q-example">記入例を入れる</button>
           <button type="button" id="q-clear">入力を初期状態に戻す</button>
           <button type="button" id="q-save">回答を保存（.json）</button>
           <label class="filebtn">保存した回答を開く<input type="file" accept=".json,application/json" id="q-file"></label>
         </div>
+        <p class="note" id="q-auto-msg" role="status" hidden></p>
       </div>
 
       <div class="slot">
@@ -531,6 +533,26 @@ code{font:12px var(--mono)}
     }
   }
   $("q-example").addEventListener("click", () => setForm(SAMPLES.questionnaire));
+  // 主要サーバの情報カード（提供元の公開情報）と接続先の応答から、空欄だけを埋める
+  $("q-auto").addEventListener("click", () => {
+    if (!web) { showErr("解析エンジンの準備ができるまでお待ちください。"); return; }
+    $("err").hidden = true;
+    const tools = snap.tools.filter((t) => (t.name || "").trim());
+    const s = { ...snap, tools, server: { ...snap.server, url: $("srv-url").value.trim(), name: snap.server.name || "名称未設定" } };
+    const out = JSON.parse(web.autofill_json(JSON.stringify(s), JSON.stringify(getForm())));
+    if (!out.ok) { showErr(out.error); return; }
+    const info = out.autofill || {}, card = info.card;
+    const n = (info.items || []).filter((x) => x.status === "filled").length;
+    setForm(out.questionnaire);
+    const msg = $("q-auto-msg"); msg.hidden = false;
+    if (!card && !n) {
+      msg.textContent = "この接続先の情報カードはありません（対応：Microsoft Learn、Microsoft MCP Server for Enterprise、GitHub、Atlassian、Box）。MCPサーバのURLを確認するか、提供元に確認してください。";
+      return;
+    }
+    msg.textContent = (card ? `情報カード「${card.title}」（確認日 ${card.checked}）` : "接続先の応答") + `から ${n} 項目を入力しました（入力済みの項目は変更していません）。`
+      + (card && card.stale ? "確認日から180日以上たっているため、最新の資料で再確認してください。" : "")
+      + "根拠と補足は審査票に表示されます。最終確認は人が行ってください。";
+  });
   $("q-clear").addEventListener("click", () => setForm({}));
   $("q-save").addEventListener("click", () => download("questionnaire.json", pretty(getForm())));
   $("q-file").addEventListener("change", async (ev) => {
@@ -637,6 +659,23 @@ code{font:12px var(--mono)}
       el("div", { class: "threats" }, ...Object.entries(THREATS).map(([k, label]) =>
         el("div", {}, el("span", {}, label), el("span", { class: `s-${r.threats[k]}` }, MARK[r.threats[k]]))))));
 
+    const af = r.autofill || {};
+    if (af.card || (af.items || []).length) {
+      const fmt = (v) => v === true ? "はい" : v === false ? "いいえ" : Array.isArray(v) ? (v.join("、") || "-") : (v == null ? "-" : String(v));
+      const link = (u) => /^https:\/\//.test(u || "") ? el("a", { href: u, target: "_blank", rel: "noopener noreferrer" }, u) : (u || "-");
+      const ST = { filled: "自動入力", matches: "回答と一致", differs: "回答と相違" };
+      const blk = el("div", { class: "block" }, el("h3", {}, af.card ? `提供元の公開情報（${af.card.title}、確認日 ${af.card.checked}）` : "接続先の応答から入力した項目"),
+        el("p", { class: "note" }, "提供元の公開情報と接続先の応答から入力・照合した項目です。契約プランで条件が異なる場合があるため、最終確認は人が行ってください。"));
+      if (af.card && af.card.stale) blk.append(el("p", { class: "note" }, "⚠ 確認日から180日以上たっています。提供元の最新の資料で再確認してください。"));
+      if ((af.items || []).length) blk.append(el("div", { class: "tablewrap" }, el("table", {},
+        el("thead", {}, el("tr", {}, el("th", {}, "項目"), el("th", {}, "値"), el("th", {}, "状態"), el("th", {}, "根拠"))),
+        el("tbody", {}, ...af.items.map((x) => el("tr", {},
+          el("td", {}, x.label), el("td", {}, x.display || fmt(x.value)),
+          el("td", {}, ST[x.status] + (x.status === "differs" ? `（回答：${fmt(x.answer)}）` : "")),
+          el("td", {}, link(x.source), x.note ? "／" + x.note : "")))))));
+      if (af.card && (af.card.notes || []).length) blk.append(el("ul", {}, ...af.card.notes.map((nt) => el("li", {}, nt.text + "（", link(nt.source), "）"))));
+      sheet.append(blk);
+    }
     const details = el("div", { class: "block" }, el("h3", {}, "詳細と根拠"));
     for (const it of r.items) {
       const d = el("details", {}, el("summary", {}, `${it.no}. ${it.title}　`, el("span", { class: `s-${it.status}` }, MARK[it.status])));

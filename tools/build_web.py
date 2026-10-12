@@ -20,7 +20,7 @@ from magate.checks.rugpull import save_pin  # noqa: E402
 # ブラウザ版に含めるモジュール（collect / cli / mcp_server / policy_agent は通信を伴うため含めない）
 MODULES = [
     "magate/__init__.py", "magate/hashing.py", "magate/model.py", "magate/rubric.py",
-    "magate/report.py", "magate/web.py", "magate/openapi.py",
+    "magate/report.py", "magate/web.py", "magate/openapi.py", "magate/catalog.py", "magate/autofill.py",
     "magate/checks/__init__.py", "magate/checks/text.py", "magate/checks/poisoning.py",
     "magate/checks/shadowing.py", "magate/checks/rugpull.py", "magate/checks/auth.py", "magate/checks/scopes.py",
 ]

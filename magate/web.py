@@ -11,6 +11,7 @@ import tempfile
 
 from .checks.rugpull import FIRST_AUDIT_MESSAGE, NO_PIN_CONDITION, NO_PIN_MESSAGE, pin_path, save_pin
 from .openapi import OpenAPIError, is_openapi, to_snapshot
+from .autofill import autofill
 from .report import to_json, to_markdown
 from .rubric import evaluate
 
@@ -78,7 +79,8 @@ def run(snapshot_text: str, questionnaire_text: str = "", inventory_texts: list[
             # 照合は審査対象のサーバ名で行う
             with open(pin_path(pins_dir, snap["server"]["name"]), "w", encoding="utf-8") as f:
                 json.dump(pin, f, ensure_ascii=False)
-        res = _for_browser(evaluate(snap, q, inv, pins_dir))
+        _, info = autofill(snap, q, fill=False)  # ブラウザ版は画面で入力済みの値を照合だけする
+        res = _for_browser(evaluate(snap, q, inv, pins_dir, autofill=info))
         new_pin_dir = os.path.join(work, "newpin")
         with open(save_pin(new_pin_dir, snap, approved_by="", note="ブラウザ版で作成。承認後に承認者を記入して保存すること"),
                   encoding="utf-8") as f:
@@ -115,4 +117,15 @@ def openapi_json(text: str) -> str:
     try:
         return json.dumps({"ok": True, "snapshot": to_snapshot(spec)}, ensure_ascii=False)
     except OpenAPIError as e:
+        return json.dumps({"ok": False, "error": str(e)}, ensure_ascii=False)
+
+
+def autofill_json(snapshot_text: str, questionnaire_text: str = "") -> str:
+    """ブラウザ版：「提供元の公開情報で入力」ボタン。空欄だけを埋めた質問票と記録を返す。"""
+    try:
+        snap = _snapshot(_parse(snapshot_text, "ツール定義"))
+        q = _parse(questionnaire_text, "質問票") if questionnaire_text.strip() else {}
+        q, info = autofill(snap, q, fill=True)
+        return json.dumps({"ok": True, "questionnaire": q, "autofill": info}, ensure_ascii=False)
+    except InputError as e:
         return json.dumps({"ok": False, "error": str(e)}, ensure_ascii=False)

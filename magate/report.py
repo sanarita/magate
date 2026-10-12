@@ -80,6 +80,7 @@ def _to_markdown(r: Result, redact: bool = False) -> str:
     for k, label in THREAT_LABELS.items():
         L.append(f"| {label} | {ICON[r.threats[k]]} |")
 
+    L += _autofill_md(r.autofill, redact)
     L += ["", "## 詳細"]
     for it in r.items:
         L += ["", f"### {it.no}. {it.title}（{ICON[it.status]}）"]
@@ -96,10 +97,45 @@ def _to_markdown(r: Result, redact: bool = False) -> str:
     return "\n".join(L) + "\n"
 
 
+AUTOFILL_STATUS = {"filled": "自動入力", "matches": "回答と一致", "differs": "回答と相違"}
+
+
+def _fmt(v) -> str:
+    if v is True:
+        return "はい"
+    if v is False:
+        return "いいえ"
+    if isinstance(v, list):
+        return "、".join(map(str, v)) or "-"
+    return "-" if v is None else str(v)
+
+
+def _autofill_md(info: dict, redact: bool = False) -> list[str]:
+    if not info:
+        return []
+    card = info.get("card")
+    head = f"## 提供元の公開情報（情報カード：{card['title']}、確認日 {card['checked']}）" if card else "## 接続先の応答から自動入力した項目"
+    L = ["", head, "",
+         "> 提供元の公開情報と接続先の応答から入力・照合した項目です。契約プランで条件が異なる場合があるため、最終確認は人が行ってください。"]
+    if card and card.get("stale"):
+        L += ["> ⚠️ 確認日から180日以上たっています。提供元の最新の資料で再確認してください。"]
+    if info.get("items"):
+        L += ["", "| 項目 | 値 | 状態 | 根拠 |", "|---|---|---|---|"]
+        for it in info["items"]:
+            st = AUTOFILL_STATUS[it["status"]]
+            if it["status"] == "differs":
+                st += f"（回答：{_fmt(it['answer'])}）"
+            note = f"／{it['note']}" if it.get("note") else ""
+            L.append(f"| {it['label']} | {it.get('display') or _fmt(it['value'])} | {st} | {it['source']}{note} |")
+    if card and card.get("notes"):
+        L += ["", "**補足（提供元の公開情報）**", *[f"- {n['text']}（{n['source']}）" for n in card["notes"]]]
+    return L
+
+
 def to_json(r: Result) -> str:
     return json.dumps({
         "server": r.server, "verdict": r.verdict, "blockers": r.blockers, "conditions": r.conditions,
-        "threats": r.threats,
+        "threats": r.threats, "autofill": r.autofill,
         "items": [{"no": it.no, "title": it.title, "status": it.status, "asi": it.asi, "llm": it.llm,
                    "findings": [f.to_dict() for f in it.findings]} for it in r.items],
     }, ensure_ascii=False, indent=2)
