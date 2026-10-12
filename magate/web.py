@@ -71,13 +71,13 @@ def run(snapshot_text: str, questionnaire_text: str = "", inventory_texts: list[
 
     work = tempfile.mkdtemp(prefix="magate-")
     try:
-        pins_dir = None
+        # 記録の指定がなければ「初回審査」として扱う（ブラウザ版は審査のたびに固定用の記録を作れるため）
+        pins_dir = os.path.join(work, "pins")
+        os.makedirs(pins_dir)
         if pin_text.strip():
             pin = _parse(pin_text, "固定ハッシュ")
             if not isinstance(pin, dict) or "manifest" not in pin or "tools" not in pin:
                 raise InputError("固定ハッシュのファイル形式が違います（magate pin で作った .pin.json を指定）")
-            pins_dir = os.path.join(work, "pins")
-            os.makedirs(pins_dir)
             # 照合は審査対象のサーバ名で行う
             with open(pin_path(pins_dir, snap["server"]["name"]), "w", encoding="utf-8") as f:
                 json.dump(pin, f, ensure_ascii=False)

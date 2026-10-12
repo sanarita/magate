@@ -20,5 +20,7 @@ class TestBrowserWording(unittest.TestCase):
         text = json.dumps(out["result"], ensure_ascii=False) + out["markdown"]
         self.assertNotIn("magate pin", text)
         self.assertNotIn("`pin`", text)
-        self.assertTrue(any("承認用に定義を固定（.pin.json）" in c for c in out["result"]["conditions"]))
+        rug = [f for it in out["result"]["items"] for f in it["findings"] if f["threat"] == "rug_pull"]
+        self.assertEqual([(f["status"], "承認用に定義を固定（.pin.json）" in f["message"]) for f in rug], [("OK", True)])
+        self.assertEqual(out["result"]["threats"]["rug_pull"], "OK")
         self.assertNotIn("verified_by_human", text)

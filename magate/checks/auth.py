@@ -15,6 +15,9 @@ ASI_ID = ["ASI03"]   # アイデンティティ・権限の悪用
 LLM = ["LLM06"]      # 過剰なエージェンシー
 
 
+NO_AUTH_CONDITION = "公開情報のみを扱うサーバであることを確認し、公開情報の検索用途に限定すること（社外秘以上のデータは送らない）"
+
+
 def check_auth(snapshot: dict, q: dict) -> list[Finding]:
     f: list[Finding] = []
     obs = snapshot.get("observations", {})
@@ -29,13 +32,18 @@ def check_auth(snapshot: dict, q: dict) -> list[Finding]:
         f.append(Finding("auth", FAIL, "接続先がHTTPSではありません", ASI_ID, LLM, evidence=url))
 
     # --- 認証方式 ---
-    if obs.get("unauthenticated_tools_list"):
+    unauth = obs.get("unauthenticated_tools_list")
+    if unauth and method == "none":
+        # 接続先の応答と回答（情報カードの自動入力を含む）が一致する場合は、1件にまとめる
+        f.append(Finding("auth", WARN, "認証なしで利用できるサーバです（接続先の応答・提供元の回答とも認証なし）", ASI_ID, LLM,
+                         condition=NO_AUTH_CONDITION))
+    elif unauth:
         f.append(Finding("auth", WARN, "認証なしでツール一覧を取得できました", ASI_ID, LLM,
                          condition="公開情報のみを扱うサーバであることを確認し、社外秘以上のデータを送らない運用とすること"))
-    if method == "none":
+    elif method == "none":
         f.append(Finding("auth", WARN, "提供元回答：認証なし", ASI_ID, LLM,
                          condition="公開情報の検索用途に限定すること"))
-    elif method == "api_key":
+    if method == "api_key":
         f.append(Finding("auth", WARN, "静的APIキー方式です（ユーザー単位の権限分離・失効が難しい）", ASI_ID, LLM,
                          condition="キーの保管場所（Key Vault等）・ローテーション周期・利用者範囲を定めること"))
     elif method is None and not prm and not obs.get("api_auth_schemes"):

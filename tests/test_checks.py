@@ -90,6 +90,24 @@ class TestRugPull(unittest.TestCase):
         self.assertEqual(check_rugpull(load_snapshot(S("patent_clean.json")), None)[0].status, UNKNOWN)
 
 
+class TestNoAuthMerged(unittest.TestCase):
+    def _auth(self, unauth, method):
+        snap = load_snapshot(S("patent_clean.json"))
+        snap["observations"]["unauthenticated_tools_list"] = unauth
+        snap["observations"]["auth_required"] = not unauth
+        qq = q(); qq["auth"]["method"] = method
+        return [f for f in check_auth(snap, qq) if f.status == WARN and ("認証なし" in f.message)]
+
+    def test_observed_and_answered_none_is_one_finding(self):
+        fs = self._auth(True, "none")
+        self.assertEqual(len(fs), 1)
+        self.assertIn("とも認証なし", fs[0].message)
+
+    def test_observed_only_and_answered_only_stay_separate(self):
+        self.assertEqual([f.message for f in self._auth(True, "oauth2.1")], ["認証なしでツール一覧を取得できました"])
+        self.assertEqual([f.message for f in self._auth(False, "none")], ["提供元回答：認証なし"])
+
+
 class TestConditionWording(unittest.TestCase):
     def test_poisoning_warn_condition_names_the_reason(self):
         snap = load_snapshot(S("patent_clean.json"))
