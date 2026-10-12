@@ -6,3 +6,6 @@ out/
 .env
 *.egg-info/
 real/
+
+snaps/
+out/

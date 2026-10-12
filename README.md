@@ -30,6 +30,60 @@ maGATE が受け持つのは、**接続前の審査と承認後の監視**です
 | APIキーなどの認証情報が漏れる | △ 方式の指摘のみ | 保管場所とローテーションのルール |
 | 利用者が申請せずに接続する | × 対象外 | 申請ルール、ゲートウェイでの接続先の制限 |
 
+## 実在サーバの調査結果（2026年10月）
+
+主要な公式リモートMCPサーバ18件に maGATE を実行し、認証まわりの実装を比較しました。
+トークンを使わず、公開されている情報（OAuthメタデータ・ツール一覧）だけを取得しています。ツールは実行していません。
+
+- 調査日：2026-10-12
+- 対象一覧・取得データ：[research/2026-10-remote-mcp/](research/2026-10-remote-mcp/)
+- メタデータは提供元が随時変更するため、結果は調査日時点のものです
+
+### 1. PKCE(S256) の宣言
+
+OAuth を使う15件のうち、**14件が認可サーバのメタデータで S256 を宣言**していました。
+
+| 結果 | サーバ |
+|---|---|
+| S256 のみ | Airtable, Atlassian, Box, Cloudflare Observability, GitHub, Hugging Face, Linear, Notion, Sentry, Stripe, Vercel |
+| S256 ＋ plain | Asana, Supabase |
+| 宣言なし | Microsoft MCP Server for Enterprise（プレビュー） |
+
+- Microsoft の認可サーバ（Entra ID）は PKCE 自体には対応していますが、メタデータに `code_challenge_methods_supported` がありません。MCP 認可仕様では、この項目がない場合クライアントは接続を拒否しなければならないため、maGATE は「不可」と判定します。社内ゲートウェイでメタデータを補う構成なら改善できます。
+- 同サーバでは、指定された認可サーバ（`…/organizations/v2.0`）と、メタデータの `issuer`（`…/{tenantid}/v2.0`）が一致しないことも確認しました（Entra ID のマルチテナント窓口の既知の挙動）。
+- `plain` は PKCE の弱い方式です。併記されている場合、maGATE は「要対応」としてクライアント側で S256 を使う設定かの確認を求めます。
+
+### 2. スコープ設計
+
+PKCE はほぼ全社が満たしていました。**実際に差がつくのは「権限をどこまで絞れるか」**です。
+
+| 設計 | サーバ | 接続時の判断 |
+|---|---|---|
+| 細かく分かれている | Airtable, Atlassian, Supabase | 業務に必要な読み取りスコープだけで接続できる |
+| 読み・書きの2択 | Linear | 参照用途なら `read` のみに絞る |
+| 広い権限を含む | GitHub（`repo`）, Sentry（`project:write` を含む） | 読み取り専用の接続方法や不要スコープの除外を検討する |
+| 1種類のみ | Stripe（`mcp`）, Notion・Asana（`default`） | スコープで権限を絞れないため、ツール単位の無効化などで補う |
+| ログイン用のみ・宣言なし | Vercel, Box, Cloudflare Observability | 権限は提供元の管理画面側の設定で決まる |
+| Graph 由来の `*.Read.All` | Microsoft MCP Server for Enterprise | テナント全体の読み取り権限。付与するスコープを最小限にする |
+
+「接続してよいか」だけでなく、「**どの権限で接続するか**」を審査の論点にすることを推奨します。
+
+### 3. ブラウザ版「URLから取得」の対応状況（CORS）
+
+| 結果 | 件数 | サーバ |
+|---|---|---|
+| 取得できる | 3 | Microsoft Learn, DeepWiki, Hugging Face |
+| 接続できるが、ツール一覧には認証が必要 | 6 | GitHub（通常・読み取り専用）, Atlassian, Notion, Linear, Asana |
+| ブラウザからの接続を許可していない | 9 | Box, Microsoft Enterprise, Sentry, Stripe, Supabase, Vercel, Airtable, Cloudflare（2件） |
+
+**CORS で「不可」はセキュリティが低いという意味ではありません。** 知らない Web サイトからの接続を受け付けない設定であり、むしろ守りが固いとも言えます。これらのサーバはコマンドライン版の `snapshot` で取得できます（今回の調査も CLI で全件取得）。
+
+### この調査で行った maGATE の改善
+
+- 認可サーバのメタデータ取得で、OpenID Connect の「発行元URLの末尾に付ける」形式（Entra ID などが採用）に対応しました。従来はこの形式を探索しておらず、Microsoft の認可サーバ情報を取得できていませんでした。
+- PKCE の `plain` 方式が S256 と併記されている場合に警告するようにしました。
+- いずれも再現用の模擬サーバを使った自動テストを追加しています（計55件）。
+
 ## 何を自動でやるか
 
 ```mermaid
