@@ -6,6 +6,7 @@
 """
 from __future__ import annotations
 
+import re
 import urllib.parse
 
 from ..model import FAIL, OK, UNKNOWN, WARN, Finding
@@ -58,6 +59,7 @@ def check_auth(snapshot: dict, q: dict) -> list[Finding]:
             issuer = asm.get("issuer", "")
             if issuer and not issuer.startswith("https://"):
                 f.append(Finding("auth", FAIL, "認可サーバの issuer がHTTPSではありません", ASI_ID, LLM, evidence=issuer))
+            f.extend(check_issuer(((prm or {}).get("authorization_servers") or [None])[0], issuer))
             methods = asm.get("code_challenge_methods_supported") or []
             if "S256" not in methods:
                 f.append(Finding("auth", FAIL, "PKCE(S256) への対応が宣言されていません（MCP認可仕様では必須）", ASI_ID, LLM,
@@ -101,6 +103,35 @@ def _openapi_auth(obs: dict) -> list[Finding]:
     if obs.get("https") is False:
         out.append(Finding("auth", FAIL, "API仕様書の接続先がHTTPSではありません", ASI_ID, LLM))
     return out
+
+
+def check_issuer(expected: str | None, issuer: str) -> list[Finding]:
+    """認可サーバのメタデータの issuer が、MCPサーバの指定した認可サーバと一致するか（RFC 8414 3.3）。
+
+    RFC 8414 では、取得したメタデータの issuer が問い合わせに使った発行元と完全に一致しない場合、
+    そのメタデータを使ってはならないと定めている（別の認可サーバへのすり替え＝mix-up 攻撃の防止）。
+    - 別ホスト        → 不可（すり替え・設定誤りの可能性があり、厳密なクライアントは接続を拒否する）
+    - {tenantid} 等の置き換え前の文字列 → 要対応（Entra ID のマルチテナント窓口などの既知の挙動）
+    - 同ホストでパス違い → 要対応
+    末尾のスラッシュの有無は同一とみなす。
+    """
+    if not expected:
+        return []
+    if not issuer:
+        return [Finding("auth", WARN, "認可サーバのメタデータに issuer がありません（RFC 8414 では必須）", ASI_ID, LLM,
+                        condition="提供元に認可サーバのメタデータの不備を確認すること")]
+    if issuer.rstrip("/") == expected.rstrip("/"):
+        return []
+    ev = f"指定された認可サーバ={expected} / メタデータの issuer={issuer}"
+    if _origin(issuer) != _origin(expected):
+        return [Finding("auth", FAIL, "認可サーバの issuer が、MCPサーバの指定した認可サーバと別のホストです（すり替えの可能性）", ASI_ID, LLM,
+                        evidence=ev)]
+    if re.search(r"\{[^{}]+\}", issuer):
+        return [Finding("auth", WARN, "認可サーバの issuer が置き換え前のテンプレート（{tenantid} など）のままで、指定された認可サーバと一致しません", ASI_ID, LLM,
+                        condition="テナント固有の認可サーバ（例：…/{テナントID}/v2.0）で接続する設定にし、厳密なクライアントで接続できるか確認すること",
+                        evidence=ev)]
+    return [Finding("auth", WARN, "認可サーバの issuer が、MCPサーバの指定した認可サーバと一致しません（RFC 8414 では一致が必須）", ASI_ID, LLM,
+                    condition="提供元に正しい認可サーバのURLを確認すること", evidence=ev)]
 
 
 def check_confused_deputy(q: dict) -> list[Finding]:

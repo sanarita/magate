@@ -112,6 +112,33 @@ class TestAuthAndScopes(unittest.TestCase):
         fs = check_auth(load_snapshot(S("patent_clean.json")), q())
         self.assertFalse(any("plain" in f.message for f in fs))
 
+    def _issuer_case(self, as_url, issuer):
+        snap = load_snapshot(S("patent_clean.json"))
+        snap["oauth"]["protected_resource"]["authorization_servers"] = [as_url]
+        snap["oauth"]["authorization_server"]["issuer"] = issuer
+        return [f for f in check_auth(snap, q()) if "issuer" in f.message]
+
+    def test_issuer_match_no_finding(self):
+        self.assertEqual(self._issuer_case("https://auth.patent.example", "https://auth.patent.example/"), [])
+
+    def test_issuer_template_warns(self):  # Microsoft Entra ID のマルチテナント窓口で実際に観測した形
+        fs = self._issuer_case("https://login.microsoftonline.com/organizations/v2.0",
+                               "https://login.microsoftonline.com/{tenantid}/v2.0")
+        self.assertEqual([f.status for f in fs], [WARN])
+        self.assertIn("テンプレート", fs[0].message)
+
+    def test_issuer_other_host_fails(self):
+        fs = self._issuer_case("https://auth.patent.example", "https://evil.example")
+        self.assertEqual([f.status for f in fs], [FAIL])
+
+    def test_issuer_same_host_other_path_warns(self):
+        fs = self._issuer_case("https://auth.patent.example/tenant-a", "https://auth.patent.example/tenant-b")
+        self.assertEqual([f.status for f in fs], [WARN])
+
+    def test_issuer_missing_warns(self):
+        fs = self._issuer_case("https://auth.patent.example", "")
+        self.assertEqual([f.status for f in fs], [WARN])
+
     def test_http_fails(self):
         snap = load_snapshot(S("patent_clean.json")); snap["server"]["url"] = "http://mcp.patent.example/mcp"
         self.assertIn(FAIL, [f.status for f in check_auth(snap, q())])
