@@ -74,6 +74,26 @@ class TestAutofill(unittest.TestCase):
         self.assertEqual(st["operator.name"], MATCHES)
         self.assertEqual(st["auth.method"], DIFFERS)
 
+    def test_certifications_filled_with_scope_note(self):
+        out, info = autofill(snap("https://mcp.box.com"), {}, today=TODAY)
+        self.assertEqual(out["operator"]["certifications"], ["ISO/IEC 27001", "ISMAP"])
+        cert = next(x for x in info["items"] if x["key"] == "operator.certifications")
+        self.assertIn("認証範囲に含まれるかは", cert["note"])
+        # 順序・大文字小文字が違っても「一致」とみなす
+        _, info = autofill(snap("https://mcp.box.com"), {"operator": {"certifications": ["ismap", "ISO/IEC 27001"]}}, today=TODAY)
+        self.assertEqual(next(x for x in info["items"] if x["key"] == "operator.certifications")["status"], MATCHES)
+
+    def test_every_card_has_certifications(self):
+        for c in CARDS:
+            self.assertIn("operator.certifications", c["answers"], c["id"])
+            self.assertIn("認証範囲", c["answers"]["operator.certifications"]["note"], c["id"])
+
+    def test_certifications_clear_operator_condition(self):
+        s = snap("https://mcp.atlassian.com/v2/mcp")
+        q, info = autofill(s, {}, today=TODAY)
+        res = evaluate(s, q, autofill=info)
+        self.assertNotIn("法人番号または ISMS / SOC 2 等の認証を確認すること", res.conditions)
+
     def test_check_only_mode(self):
         q = {"operator": {"name": "Box, Inc."}}
         out, info = autofill(snap("https://mcp.box.com"), q, fill=False, today=TODAY)

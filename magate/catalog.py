@@ -25,6 +25,15 @@ _ATL_DSP = "https://support.atlassian.com/security-and-access-policies/docs/prev
 _BOX_REPO = "https://github.com/box/mcp-server-box-remote"
 _BOX_GUIDE = "https://developer.box.com/guides/box-mcp/remote/"
 _RESEARCH = "https://github.com/sanarita/magate/tree/main/research/2026-10-remote-mcp"
+_MS_ISO = "https://learn.microsoft.com/compliance/regulatory/offering-iso-27001"
+_GH_CERT = "https://github.blog/changelog/2024-06-03-github-copilot-compliance-soc-2-type-1-report-and-iso-iec-270012013-certification-scope/"
+_GH_SOC2 = "https://github.blog/2019-08-27-github-has-soc-1-and-soc-2-type-2-reports"
+_ATL_ISO = "https://www.atlassian.com/ja/trust/compliance/resources/iso27001"
+_BOX_ISO = "https://support.box.com/hc/en-us/articles/360043691774-ISO-27001-Certification-Overview-and-FAQ"
+_BOX_ISMAP = "https://www.boxsquare.jp/ismap"
+# 第三者認証は会社（またはその主要クラウドサービス）としてのもの。MCPサーバ自体が認証範囲に含まれるかは
+# 各社の証明書の適用範囲で確認する必要があるため、note に必ずその旨を書く。
+_SCOPE = "会社の主要クラウドサービスとしての認証。このMCPサーバが認証範囲に含まれるかは証明書の適用範囲で要確認"
 
 CARDS = [
     {
@@ -37,6 +46,8 @@ CARDS = [
             "operator.domain": {"value": "microsoft.com", "source": _MS_LEARN},
             "operator.security_contact": {"value": "https://github.com/MicrosoftDocs/mcp/blob/main/SECURITY.md",
                                           "source": _MS_LEARN},
+            "operator.certifications": {"value": ["ISO/IEC 27001"], "source": _MS_ISO,
+                                        "note": _SCOPE + "（Service Trust Portal で確認できる）"},
             "auth.method": {"value": "none", "source": _MS_LEARN, "note": "APIキー・ログイン不要と明記"},
         },
         "notes": [
@@ -55,6 +66,8 @@ CARDS = [
             "operator.domain": {"value": "cloud.microsoft", "source": _MS_ENT},
             "operator.security_contact": {"value": "https://msrc.microsoft.com/report", "source": "https://msrc.microsoft.com",
                                           "note": "Microsoft全体の脆弱性報告窓口（MSRC）"},
+            "operator.certifications": {"value": ["ISO/IEC 27001"], "source": _MS_ISO,
+                                        "note": _SCOPE + "。本サービスはプレビュー版のため、範囲外の可能性が高い"},
             "auth.method": {"value": "oauth2.1", "source": _MS_ENT_START, "note": "委任アクセス許可のみ。スコープは管理者がクライアントごとに付与"},
             "audit.server_side_audit_log": {"value": True, "source": _MS_ENT + "#logs",
                                             "note": "Microsoft Graph アクティビティログを有効化した場合。MCPサーバの appId で絞り込める"},
@@ -78,6 +91,9 @@ CARDS = [
             "operator.domain": {"value": "githubcopilot.com", "source": _GH_GOV,
                                 "note": "GitHub の Copilot 用ドメイン。データ所在地オプションでは ghe.com"},
             "operator.security_contact": {"value": "https://github.com/security", "source": "https://github.com/security"},
+            "operator.certifications": {"value": ["ISO/IEC 27001", "SOC 2 Type 2"], "source": _GH_CERT,
+                                        "note": "ISMS の範囲に Copilot Business／Enterprise を含む。SOC 2 Type 2 は GitHub Enterprise Cloud の報告書（"
+                                                + _GH_SOC2 + "）。" + _SCOPE},
             "auth.method": {"value": "oauth2.1", "source": _GH_GOV},
             "audit.server_side_audit_log": {"value": True, "source": _GH_GOV,
                                             "note": "基盤のAPI呼び出しが GitHub の監査ログに記録される（利用可能な場合）。MCPのツール呼び出し単位の記録ではない"},
@@ -96,6 +112,8 @@ CARDS = [
         "answers": {
             "operator.name": {"value": "Atlassian", "source": _ATL_CTL},
             "operator.domain": {"value": "atlassian.com", "source": _ATL_CTL},
+            "operator.certifications": {"value": ["ISO/IEC 27001", "ISO/IEC 27018"], "source": _ATL_ISO,
+                                        "note": "認証の関連製品に Rovo が含まれる。" + _SCOPE},
             "auth.method": {"value": "oauth2.1", "source": _ATL_CTL,
                             "note": "既定は OAuth 2.1。APIトークンでの接続も可能で、管理者が無効化できる"},
             "audit.server_side_audit_log": {"value": True, "source": _ATL_MON,
@@ -116,6 +134,9 @@ CARDS = [
         "answers": {
             "operator.name": {"value": "Box, Inc.", "source": _BOX_REPO},
             "operator.domain": {"value": "box.com", "source": _BOX_REPO},
+            "operator.certifications": {"value": ["ISO/IEC 27001", "ISMAP"], "source": _BOX_ISO,
+                                        "note": "ISMAP は2021年9月13日に登録、登録範囲に Box Platform と 3rd Party Integration を含む（"
+                                                + _BOX_ISMAP + "）。" + _SCOPE},
             "auth.method": {"value": "oauth2.1", "source": _BOX_REPO, "note": "Box の認可サーバによる OAuth 保護"},
         },
         "notes": [

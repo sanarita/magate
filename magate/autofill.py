@@ -43,6 +43,14 @@ def _empty(v) -> bool:
     return v is None or v == "" or v == []
 
 
+def _same(a, b) -> bool:
+    """一覧（認証名など）は順序と大文字小文字を無視して比べる。"""
+    if isinstance(a, list) and isinstance(b, list):
+        norm = lambda xs: sorted(str(x).strip().casefold() for x in xs)
+        return norm(a) == norm(b)
+    return a == b
+
+
 def _derived(snapshot: dict) -> dict:
     """接続先の応答から機械的に分かる項目。"""
     out = {}
@@ -73,9 +81,9 @@ def autofill(snapshot: dict, q: dict, fill: bool = True, today: _dt.date | None 
             q.setdefault(sec, {})[k] = copy.deepcopy(a["value"])
             status = FILLED
         else:
-            status = MATCHES if cur == a["value"] else DIFFERS
+            status = MATCHES if _same(cur, a["value"]) else DIFFERS
         items.append({"key": key, "label": LABELS.get(key, key), "value": a["value"], "answer": cur,
-                      "display": DISPLAY.get(key, {}).get(a["value"]),
+                      "display": DISPLAY.get(key, {}).get(a["value"]) if isinstance(a["value"], str) else None,
                       "status": status, "source": a.get("source", ""), "note": a.get("note", "")})
     info = {"items": items}
     if card:

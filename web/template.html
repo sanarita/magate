@@ -152,9 +152,10 @@ code{font:12px var(--mono)}
           <label>MCPサーバのURL（任意）<input id="srv-url" type="url" placeholder="https://…/mcp" autocomplete="off" list="mcp-examples"><span class="hint" style="display:block">下のボタンを押したときだけアクセスします</span></label>
         </div>
         <datalist id="mcp-examples">
+          <option value="https://learn.microsoft.com/api/mcp">Microsoft Learn（認証不要・情報カードあり）</option>
           <option value="https://mcp.deepwiki.com/mcp">DeepWiki（認証不要）</option>
-          <option value="https://mcp.context7.com/mcp">Context7（認証不要）</option>
-          <option value="https://mcp.notion.com/mcp">Notion（OAuth必須）</option>
+          <option value="https://api.githubcopilot.com/mcp/">GitHub（OAuth必須・情報カードあり）</option>
+          <option value="https://mcp.atlassian.com/v2/mcp">Atlassian（OAuth必須・情報カードあり）</option>
         </datalist>
         <div class="row">
           <button type="button" id="fetch-url">URLから取得（試験的）</button>
@@ -443,7 +444,7 @@ code{font:12px var(--mono)}
       { k: "operator.corporate_number", label: "法人番号（13桁）", type: "text", hint: "国税庁の法人番号公表サイトで調べられます" },
       { k: "operator.domain", label: "運営会社のドメイン", type: "text", ph: "例：example.co.jp" },
       { k: "operator.security_contact", label: "セキュリティの問い合わせ窓口", type: "text" },
-      { k: "operator.certifications", label: "第三者認証", type: "list", ph: "例：ISMS, SOC 2（カンマ区切り）" },
+      { k: "operator.certifications", label: "第三者認証", type: "list", comma: true, ph: "例：ISO/IEC 27001, SOC 2 Type 2（カンマ区切り）" },
       { k: "operator.verified_by_human", label: "法人番号公表サイト等で、会社の実在を自分で確認した", type: "check" },
     ]},
     { title: "認証", fields: [
@@ -509,7 +510,8 @@ code{font:12px var(--mono)}
     const v = inp.value.trim();
     if (f.type === "tri") return v === "yes" ? true : v === "no" ? false : null;
     if (f.type === "number") return v === "" ? null : Math.max(0, parseInt(v, 10));
-    if (f.type === "list") return v ? v.split(/[,、\s]+/).filter(Boolean) : [];
+    // 認証名は空白を含む（ISO/IEC 27001 など）ため、カンマ区切りのみ。スコープ・国コードは空白でも区切る
+    if (f.type === "list") return v ? v.split(f.comma ? /\s*[,、，\n]\s*/ : /[,、，\s]+/).map((x) => x.trim()).filter(Boolean) : [];
     return v === "" ? null : v;
   }
   function setVal({ f, inp }, v) {
