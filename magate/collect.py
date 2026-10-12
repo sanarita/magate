@@ -124,11 +124,25 @@ def fetch_oauth(url: str, www_auth: str | None = None) -> dict:
             break
     asm = None
     for issuer in (prm or {}).get("authorization_servers", [])[:1]:
-        for cand in _well_known(issuer, "oauth-authorization-server") + _well_known(issuer, "openid-configuration"):
+        for cand in _as_metadata_candidates(issuer):
             asm = _get_json(cand)
             if asm:
                 break
     return {"protected_resource": prm, "authorization_server": asm}
+
+
+def _as_metadata_candidates(issuer: str) -> list[str]:
+    """認可サーバのメタデータURL候補（MCP認可仕様の探索順）。
+
+    1. RFC 8414（パス挿入）  /.well-known/oauth-authorization-server/{path}
+    2. OIDC Discovery（パス挿入）  /.well-known/openid-configuration/{path}
+    3. OIDC Discovery（末尾に付ける）  {issuer}/.well-known/openid-configuration
+       ※ Microsoft Entra ID（login.microsoftonline.com/{tenant}/v2.0）などはこの形式のみ
+    """
+    cands = (_well_known(issuer, "oauth-authorization-server")
+             + _well_known(issuer, "openid-configuration")
+             + [issuer.rstrip("/") + "/.well-known/openid-configuration"])
+    return list(dict.fromkeys(cands))  # 順序を保って重複を除く
 
 
 def fetch_http(url: str, token: str | None = None, name: str | None = None) -> dict:

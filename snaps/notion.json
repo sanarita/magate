@@ -1,0 +1,75 @@
+{
+  "server": {
+    "name": "mcp.notion.com",
+    "url": "https://mcp.notion.com/mcp",
+    "serverInfo": {},
+    "fetched_at": "2026-10-12T03:27:12+00:00"
+  },
+  "observations": {
+    "https": true,
+    "token_supplied": false,
+    "initialize_status": 401,
+    "auth_required": true
+  },
+  "tools": [],
+  "oauth": {
+    "protected_resource": {
+      "resource": "https://mcp.notion.com/mcp",
+      "authorization_servers": [
+        "https://mcp.notion.com"
+      ],
+      "scopes_supported": [
+        "default"
+      ],
+      "bearer_methods_supported": [
+        "header"
+      ],
+      "resource_name": "Notion MCP (Beta)"
+    },
+    "authorization_server": {
+      "issuer": "https://mcp.notion.com",
+      "authorization_endpoint": "https://mcp.notion.com/authorize",
+      "token_endpoint": "https://mcp.notion.com/token",
+      "protected_resources": [
+        "https://mcp.notion.com",
+        "https://mcp.notion.com/mcp",
+        "https://mcp.notion.com/sse"
+      ],
+      "registration_endpoint": "https://mcp.notion.com/register",
+      "scopes_supported": [
+        "default"
+      ],
+      "response_types_supported": [
+        "code"
+      ],
+      "response_modes_supported": [
+        "query"
+      ],
+      "grant_types_supported": [
+        "authorization_code",
+        "refresh_token",
+        "urn:ietf:params:oauth:grant-type:jwt-bearer"
+      ],
+      "authorization_grant_profiles_supported": [
+        "urn:ietf:params:oauth:grant-profile:id-jag"
+      ],
+      "token_endpoint_auth_methods_supported": [
+        "client_secret_basic",
+        "client_secret_post",
+        "none"
+      ],
+      "revocation_endpoint": "https://mcp.notion.com/token",
+      "code_challenge_methods_supported": [
+        "S256"
+      ],
+      "authorization_response_iss_parameter_supported": true,
+      "client_id_metadata_document_supported": true,
+      "introspection_endpoint": "https://mcp.notion.com/introspect",
+      "introspection_endpoint_auth_methods_supported": [
+        "client_secret_basic",
+        "client_secret_post",
+        "none"
+      ]
+    }
+  }
+}

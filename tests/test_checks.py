@@ -101,6 +101,17 @@ class TestAuthAndScopes(unittest.TestCase):
         snap["oauth"]["authorization_server"]["code_challenge_methods_supported"] = ["plain"]
         self.assertIn(FAIL, [f.status for f in check_auth(snap, q())])
 
+    def test_pkce_plain_alongside_s256_warns(self):
+        snap = load_snapshot(S("patent_clean.json"))
+        snap["oauth"]["authorization_server"]["code_challenge_methods_supported"] = ["plain", "S256"]
+        fs = check_auth(snap, q())
+        self.assertNotIn(FAIL, [f.status for f in fs])
+        self.assertTrue(any(f.status == WARN and "plain" in f.message for f in fs))
+
+    def test_pkce_s256_only_has_no_plain_warning(self):
+        fs = check_auth(load_snapshot(S("patent_clean.json")), q())
+        self.assertFalse(any("plain" in f.message for f in fs))
+
     def test_http_fails(self):
         snap = load_snapshot(S("patent_clean.json")); snap["server"]["url"] = "http://mcp.patent.example/mcp"
         self.assertIn(FAIL, [f.status for f in check_auth(snap, q())])

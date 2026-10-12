@@ -58,9 +58,14 @@ def check_auth(snapshot: dict, q: dict) -> list[Finding]:
             issuer = asm.get("issuer", "")
             if issuer and not issuer.startswith("https://"):
                 f.append(Finding("auth", FAIL, "認可サーバの issuer がHTTPSではありません", ASI_ID, LLM, evidence=issuer))
-            if "S256" not in (asm.get("code_challenge_methods_supported") or []):
+            methods = asm.get("code_challenge_methods_supported") or []
+            if "S256" not in methods:
                 f.append(Finding("auth", FAIL, "PKCE(S256) への対応が宣言されていません（MCP認可仕様では必須）", ASI_ID, LLM,
                                  evidence=f"code_challenge_methods_supported={asm.get('code_challenge_methods_supported')}"))
+            elif "plain" in methods:
+                f.append(Finding("auth", WARN, "PKCEの弱い方式（plain）も有効になっています（OAuth 2.1 では S256 を使うべき）", ASI_ID, LLM,
+                                 condition="接続に使うクライアントが S256 のみを使う設定であることを確認すること",
+                                 evidence=f"code_challenge_methods_supported={methods}"))
             bad = {"implicit", "password"} & set(asm.get("grant_types_supported") or [])
             if bad:
                 f.append(Finding("auth", WARN, f"非推奨のグラントタイプが有効です: {', '.join(sorted(bad))}", ASI_ID, LLM,

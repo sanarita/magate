@@ -1,0 +1,82 @@
+{
+  "server": {
+    "name": "mcp.supabase.com",
+    "url": "https://mcp.supabase.com/mcp?read_only=true",
+    "serverInfo": {},
+    "fetched_at": "2026-10-12T03:27:18+00:00"
+  },
+  "observations": {
+    "https": true,
+    "token_supplied": false,
+    "initialize_status": 401,
+    "auth_required": true
+  },
+  "tools": [],
+  "oauth": {
+    "protected_resource": {
+      "resource": "https://mcp.supabase.com/mcp?read_only=true",
+      "bearer_methods_supported": [
+        "header"
+      ],
+      "authorization_servers": [
+        "https://api.supabase.com"
+      ],
+      "resource_documentation": "https://mcp.supabase.com/api/mcp",
+      "resource_name": "Supabase MCP (Beta)",
+      "scopes_supported": [
+        "organizations:read",
+        "projects:read",
+        "database:read",
+        "analytics:read",
+        "secrets:read",
+        "edge_functions:read",
+        "environment:read",
+        "storage:read"
+      ]
+    },
+    "authorization_server": {
+      "issuer": "https://api.supabase.com",
+      "authorization_endpoint": "https://api.supabase.com/v1/oauth/authorize",
+      "token_endpoint": "https://api.supabase.com/v1/oauth/token",
+      "registration_endpoint": "https://api.supabase.com/platform/oauth/apps/register",
+      "response_types_supported": [
+        "code"
+      ],
+      "response_modes_supported": [
+        "query"
+      ],
+      "grant_types_supported": [
+        "authorization_code",
+        "refresh_token",
+        "urn:ietf:params:oauth:grant-type:jwt-bearer"
+      ],
+      "token_endpoint_auth_methods_supported": [
+        "client_secret_basic",
+        "client_secret_post"
+      ],
+      "code_challenge_methods_supported": [
+        "S256",
+        "plain"
+      ],
+      "scopes_supported": [
+        "organizations:read",
+        "projects:read",
+        "projects:write",
+        "database:write",
+        "database:read",
+        "analytics:read",
+        "secrets:read",
+        "edge_functions:read",
+        "edge_functions:write",
+        "environment:read",
+        "environment:write",
+        "storage:read",
+        "storage:write"
+      ],
+      "authorization_response_iss_parameter_supported": true,
+      "authorization_grant_profiles_supported": [
+        "urn:ietf:params:oauth:grant-profile:id-jag"
+      ]
+    }
+  }
+}

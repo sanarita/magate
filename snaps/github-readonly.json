@@ -1,0 +1,61 @@
+{
+  "server": {
+    "name": "api.githubcopilot.com",
+    "url": "https://api.githubcopilot.com/mcp/readonly",
+    "serverInfo": {},
+    "fetched_at": "2026-10-12T03:27:09+00:00"
+  },
+  "observations": {
+    "https": true,
+    "token_supplied": false,
+    "initialize_status": 401,
+    "auth_required": true
+  },
+  "tools": [],
+  "oauth": {
+    "protected_resource": {
+      "resource": "https://api.githubcopilot.com/mcp/readonly",
+      "authorization_servers": [
+        "https://github.com/login/oauth"
+      ],
+      "scopes_supported": [
+        "repo",
+        "read:org",
+        "read:user",
+        "user:email",
+        "read:packages",
+        "write:packages",
+        "read:project",
+        "project",
+        "gist",
+        "notifications"
+      ],
+      "bearer_methods_supported": [
+        "header"
+      ],
+      "resource_name": "GitHub MCP Server"
+    },
+    "authorization_server": {
+      "issuer": "https://github.com/login/oauth",
+      "authorization_endpoint": "https://github.com/login/oauth/authorize",
+      "token_endpoint": "https://github.com/login/oauth/access_token",
+      "response_types_supported": [
+        "code"
+      ],
+      "grant_types_supported": [
+        "authorization_code",
+        "refresh_token",
+        "urn:ietf:params:oauth:grant-type:device_code"
+      ],
+      "service_documentation": "https://docs.github.com/apps/creating-github-apps/registering-a-github-app/registering-a-github-app",
+      "code_challenge_methods_supported": [
+        "S256"
+      ],
+      "device_authorization_endpoint": "https://github.com/login/device/code",
+      "authorization_response_iss_parameter_supported": true,
+      "scopes_supported": [
+        "offline_access"
+      ]
+    }
+  }
+}

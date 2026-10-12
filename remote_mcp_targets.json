@@ -1,0 +1,21 @@
+[
+  {"name": "microsoft-learn", "url": "https://learn.microsoft.com/api/mcp", "operator": "Microsoft", "auth": "なし", "category": "公開ドキュメント検索", "note": "認証なしの公式サーバ。公開情報のみ"},
+  {"name": "cloudflare-docs", "url": "https://docs.mcp.cloudflare.com/mcp", "operator": "Cloudflare", "auth": "なし", "category": "公開ドキュメント検索", "note": "旧 /sse もあり"},
+  {"name": "deepwiki", "url": "https://mcp.deepwiki.com/mcp", "operator": "Cognition (DeepWiki)", "auth": "なし", "category": "公開リポジトリ解説", "note": ""},
+  {"name": "huggingface", "url": "https://huggingface.co/mcp", "operator": "Hugging Face", "auth": "なし／OAuth（?login 付き）", "category": "モデル・データセット検索", "note": ""},
+
+  {"name": "microsoft-mcp-enterprise", "url": "https://mcp.svc.cloud.microsoft/enterprise", "operator": "Microsoft", "auth": "OAuth（Entra ID・委任のみ）", "category": "Entraディレクトリ参照（読み取り専用）", "note": "プレビュー。認可サーバがS256を宣言していない"},
+  {"name": "github", "url": "https://api.githubcopilot.com/mcp/", "operator": "GitHub", "auth": "OAuth（事前登録）", "category": "ソースコード・Issue", "note": "認可サーバのS256宣言を実データで確認済み"},
+  {"name": "github-readonly", "url": "https://api.githubcopilot.com/mcp/readonly", "operator": "GitHub", "auth": "OAuth（事前登録）", "category": "ソースコード・Issue（読み取り専用）", "note": "読み取り専用モードのURL。要確認"},
+  {"name": "box", "url": "https://mcp.box.com", "operator": "Box", "auth": "OAuth（DCR非対応・管理コンソールで発行）", "category": "文書管理", "note": "スコープが root_readwrite 等の書き込み系"},
+  {"name": "atlassian", "url": "https://mcp.atlassian.com/v2/mcp", "operator": "Atlassian", "auth": "OAuth 2.1／APIトークン", "category": "Jira・Confluence", "note": "旧 /v1/sse は2026年6月末で廃止"},
+  {"name": "notion", "url": "https://mcp.notion.com/mcp", "operator": "Notion", "auth": "OAuth", "category": "ドキュメント・Wiki", "note": ""},
+  {"name": "linear", "url": "https://mcp.linear.app/mcp", "operator": "Linear", "auth": "OAuth／APIキー", "category": "プロジェクト管理", "note": "/sse は非推奨の代替"},
+  {"name": "asana", "url": "https://mcp.asana.com/sse", "operator": "Asana", "auth": "OAuth（DCR）", "category": "プロジェクト管理", "note": "旧形式のURL。最新URLは公式ドキュメントで要確認"},
+  {"name": "sentry", "url": "https://mcp.sentry.dev/mcp", "operator": "Sentry", "auth": "OAuth", "category": "エラー監視", "note": ""},
+  {"name": "stripe", "url": "https://mcp.stripe.com", "operator": "Stripe", "auth": "OAuth／APIキー", "category": "決済", "note": ""},
+  {"name": "supabase-readonly", "url": "https://mcp.supabase.com/mcp?read_only=true", "operator": "Supabase", "auth": "OAuth", "category": "データベース（読み取り専用）", "note": "URLで読み取り専用・プロジェクト限定にできる"},
+  {"name": "vercel", "url": "https://mcp.vercel.com", "operator": "Vercel", "auth": "OAuth", "category": "デプロイ・ログ", "note": ""},
+  {"name": "cloudflare-observability", "url": "https://observability.mcp.cloudflare.com/sse", "operator": "Cloudflare", "auth": "OAuth 2.1", "category": "ログ・監視", "note": "旧SSE形式"},
+  {"name": "airtable", "url": "https://mcp.airtable.com/mcp", "operator": "Airtable", "auth": "OAuth", "category": "データベース", "note": ""}
+]

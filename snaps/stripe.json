@@ -1,0 +1,52 @@
+{
+  "server": {
+    "name": "mcp.stripe.com",
+    "url": "https://mcp.stripe.com",
+    "serverInfo": {},
+    "fetched_at": "2026-10-12T03:27:17+00:00"
+  },
+  "observations": {
+    "https": true,
+    "token_supplied": false,
+    "initialize_status": 401,
+    "auth_required": true
+  },
+  "tools": [],
+  "oauth": {
+    "protected_resource": {
+      "resource": "https://mcp.stripe.com",
+      "scopes_supported": [
+        "mcp"
+      ],
+      "authorization_servers": [
+        "https://access.stripe.com/mcp"
+      ]
+    },
+    "authorization_server": {
+      "issuer": "https://access.stripe.com/mcp",
+      "authorization_endpoint": "https://access.stripe.com/mcp/oauth2/authorize",
+      "token_endpoint": "https://access.stripe.com/mcp/oauth2/token",
+      "registration_endpoint": "https://access.stripe.com/mcp/oauth2/register",
+      "revocation_endpoint": "https://access.stripe.com/mcp/oauth2/revoke",
+      "response_types_supported": [
+        "code"
+      ],
+      "scopes_supported": [
+        "mcp"
+      ],
+      "response_modes_supported": [
+        "query"
+      ],
+      "grant_types_supported": [
+        "authorization_code",
+        "refresh_token"
+      ],
+      "token_endpoint_auth_methods_supported": [
+        "none"
+      ],
+      "code_challenge_methods_supported": [
+        "S256"
+      ]
+    }
+  }
+}

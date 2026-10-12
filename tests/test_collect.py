@@ -4,7 +4,7 @@ import threading
 import unittest
 from http.server import BaseHTTPRequestHandler, HTTPServer
 
-from magate.collect import fetch_http
+from magate.collect import _as_metadata_candidates, fetch_http
 
 TOOLS = [{"name": f"t{i}", "description": f"tool {i}", "inputSchema": {"type": "object"}} for i in range(3)]
 
@@ -58,6 +58,58 @@ class TestCollect(unittest.TestCase):
         self.assertEqual(snap["server"]["name"], "mock")
         self.assertTrue(snap["observations"]["unauthenticated_tools_list"])
         self.assertEqual(snap["oauth"]["authorization_server"]["code_challenge_methods_supported"], ["S256"])
+
+
+class EntraLike(BaseHTTPRequestHandler):
+    """Entra ID 型：発行元URLにパスがあり、OIDC Discovery を「末尾に付ける」形式でのみ公開する。"""
+    def log_message(self, *a):
+        pass
+
+    def do_GET(self):
+        port = self.server.server_address[1]
+        base = f"http://127.0.0.1:{port}"
+        if self.path == "/.well-known/oauth-protected-resource/mcp":
+            body = {"resource": f"{base}/mcp", "authorization_servers": [f"{base}/tenant-1/v2.0"]}
+        elif self.path == "/tenant-1/v2.0/.well-known/openid-configuration":
+            body = {"issuer": f"{base}/tenant-1/v2.0", "authorization_endpoint": f"{base}/tenant-1/oauth2/v2.0/authorize"}
+        else:
+            self.send_response(404); self.end_headers(); return
+        data = json.dumps(body).encode()
+        self.send_response(200); self.send_header("Content-Type", "application/json"); self.end_headers()
+        self.wfile.write(data)
+
+    def do_POST(self):
+        self.rfile.read(int(self.headers["Content-Length"]))
+        self.send_response(401)
+        self.send_header("WWW-Authenticate", 'Bearer resource_metadata="http://127.0.0.1:%d/.well-known/oauth-protected-resource/mcp"' % self.server.server_address[1])
+        self.end_headers()
+
+
+class TestAuthServerDiscovery(unittest.TestCase):
+    def test_candidates_include_oidc_append_form(self):
+        c = _as_metadata_candidates("https://login.microsoftonline.com/tid/v2.0")
+        self.assertEqual(c[0], "https://login.microsoftonline.com/.well-known/oauth-authorization-server/tid/v2.0")
+        self.assertIn("https://login.microsoftonline.com/tid/v2.0/.well-known/openid-configuration", c)
+        self.assertEqual(len(c), len(set(c)))
+
+    def test_candidates_no_duplicates_without_path(self):
+        c = _as_metadata_candidates("https://auth.example/")
+        self.assertEqual(c, ["https://auth.example/.well-known/oauth-authorization-server",
+                             "https://auth.example/.well-known/openid-configuration"])
+
+    def test_fetch_entra_style_issuer(self):
+        srv = HTTPServer(("127.0.0.1", 0), EntraLike)
+        threading.Thread(target=srv.serve_forever, daemon=True).start()
+        try:
+            snap = fetch_http(f"http://127.0.0.1:{srv.server_address[1]}/mcp")
+        finally:
+            srv.shutdown()
+            srv.server_close()
+        self.assertTrue(snap["observations"]["auth_required"])
+        asm = snap["oauth"]["authorization_server"]
+        self.assertIsNotNone(asm)
+        self.assertTrue(asm["issuer"].endswith("/tenant-1/v2.0"))
+        self.assertNotIn("code_challenge_methods_supported", asm)
 
 
 if __name__ == "__main__":
