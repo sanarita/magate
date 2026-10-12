@@ -114,7 +114,6 @@ details.more textarea{margin-top:8px;min-height:70px}
 .qsec{border-top:1px solid var(--rule)}
 .qsec:first-child{border-top:0}
 .qsec summary{display:flex;justify-content:space-between;gap:8px;padding:9px 0;font-weight:500;font-size:14px}
-.qsec summary .cnt{font-weight:400;font-size:12.5px;color:var(--muted)}
 .qbody{display:grid;gap:10px;padding:2px 0 14px}
 .check{display:flex;gap:8px;align-items:flex-start;color:var(--ink);font-size:13.5px}
 .check input{margin-top:4px}
@@ -189,7 +188,7 @@ code{font:12px var(--mono)}
         <div id="qform"></div>
         <div class="row">
           <button type="button" id="q-example">記入例を入れる</button>
-          <button type="button" id="q-clear">空にする</button>
+          <button type="button" id="q-clear">入力を初期状態に戻す</button>
           <button type="button" id="q-save">回答を保存（.json）</button>
           <label class="filebtn">保存した回答を開く<input type="file" accept=".json,application/json" id="q-file"></label>
         </div>
@@ -480,7 +479,6 @@ code{font:12px var(--mono)}
   function buildForm() {
     const root = $("qform");
     for (const sec of QFORM) {
-      const cnt = el("span", { class: "cnt" });
       const body = el("div", { class: "qbody" });
       for (const f of sec.fields) {
         let inp;
@@ -497,10 +495,9 @@ code{font:12px var(--mono)}
           if (f.hint) lab.append(el("span", { class: "hint", style: "display:block" }, f.hint));
           body.append(lab);
         }
-        inp.addEventListener("input", updateCounts); inp.addEventListener("change", updateCounts);
-        inputs[f.k] = { f, inp, cnt };
+        inputs[f.k] = { f, inp };
       }
-      root.append(el("details", { class: "qsec" }, el("summary", {}, sec.title, cnt), body));
+      root.append(el("details", { class: "qsec" }, el("summary", {}, sec.title), body));
     }
     setForm({});
   }
@@ -532,15 +529,6 @@ code{font:12px var(--mono)}
       const [sec, key] = k.split(".");
       setVal(x, q[sec] ? q[sec][key] : undefined);
     }
-    updateCounts();
-  }
-  function updateCounts() {
-    const by = new Map();
-    for (const x of Object.values(inputs)) {
-      const v = getVal(x), filled = x.f.type === "check" ? v : Array.isArray(v) ? v.length > 0 : v !== null;
-      const c = by.get(x.cnt) || [0, 0]; c[1]++; if (filled) c[0]++; by.set(x.cnt, c);
-    }
-    for (const [cnt, [n, m]] of by) cnt.textContent = `${n}／${m} 記入`;
   }
   $("q-example").addEventListener("click", () => setForm(SAMPLES.questionnaire));
   $("q-clear").addEventListener("click", () => setForm({}));
