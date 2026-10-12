@@ -7,7 +7,7 @@ from __future__ import annotations
 
 import re
 
-from ..model import FAIL, OK, WARN, Finding
+from ..model import FAIL, OK, UNKNOWN, WARN, Finding
 from .text import iter_texts, snippet
 
 ASI = ["ASI01", "ASI04"]   # ゴール乗っ取り / サプライチェーン
@@ -55,8 +55,20 @@ def scan_text(text: str) -> list[tuple[str, int, str, str]]:
     return hits
 
 
+# ツール定義が1件もない＝検査していない。「問題なし」と言わず未確認にする（web.py がブラウザ向けに言い換える）
+NO_TOOLS_CONDITION = ("アクセストークンを使って取得し直す（magate snapshot --token-env）か、"
+                      "提供元の資料からツール名と説明文を入れて再審査すること")
+
+
+def no_tools_message(snapshot: dict) -> str:
+    why = "接続先が認証を求めたため、" if (snapshot.get("observations") or {}).get("auth_required") else ""
+    return f"{why}ツール定義を取得できておらず、内容を検査していません"
+
+
 def check_poisoning(snapshot: dict, extra_scanners=()) -> list[Finding]:
     """extra_scanners: callable(text) -> list[(rule_id, weight, label, snippet)] を追加で差し込める。"""
+    if not snapshot.get("tools"):
+        return [Finding("tool_poisoning", UNKNOWN, no_tools_message(snapshot), ASI, LLM, condition=NO_TOOLS_CONDITION)]
     findings = []
     for tool in snapshot.get("tools", []):
         score, details, labels = 0, [], []

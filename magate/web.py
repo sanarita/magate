@@ -10,6 +10,7 @@ import shutil
 import tempfile
 
 from .checks.rugpull import FIRST_AUDIT_MESSAGE, NO_PIN_CONDITION, NO_PIN_MESSAGE, pin_path, save_pin
+from .checks.poisoning import NO_TOOLS_CONDITION
 from .rubric import VERIFY_CONDITION
 from .openapi import OpenAPIError, is_openapi, to_snapshot
 from .autofill import autofill
@@ -26,6 +27,7 @@ BROWSER_TEXT = {
     NO_PIN_MESSAGE: "承認したときの記録（.pin.json）が未指定のため、承認後の書き換えは照合していません",
     NO_PIN_CONDITION: "承認が決まったら「承認用に定義を固定（.pin.json）」で保存し、次回の審査で「4. 承認したときの記録」に入れて照合すること",
     FIRST_AUDIT_MESSAGE: "初回審査（照合する記録なし）。承認が決まったら「承認用に定義を固定（.pin.json）」で保存してください",
+    NO_TOOLS_CONDITION: "提供元の資料からツール名と説明文を入れて再審査すること（コマンドライン版ならアクセストークンを使って取得できる）",
     VERIFY_CONDITION: "国税庁 法人番号公表サイト等で会社の実在を確認し、質問票の「会社の実在を自分で確認した」にチェックすること",
 }
 

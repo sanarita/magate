@@ -6,7 +6,7 @@ from __future__ import annotations
 
 import re
 
-from ..model import FAIL, OK, WARN, Finding
+from ..model import FAIL, OK, UNKNOWN, WARN, Finding
 from .text import iter_texts, snippet
 
 ASI = ["ASI02", "ASI04"]  # ツール悪用 / サプライチェーン
@@ -32,6 +32,8 @@ def _norm(name: str) -> str:
 
 
 def check_shadowing(snapshot: dict, inventory: list[dict] = ()) -> list[Finding]:
+    if not snapshot.get("tools"):
+        return [Finding("shadowing", UNKNOWN, "照合するツール定義がないため、乗っ取り・上書きの表現は検査していません", ASI, LLM)]
     findings = []
     me = snapshot["server"].get("name")
     others = {}  # 正規化名 -> (サーバ名, 元のツール名)

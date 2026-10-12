@@ -24,3 +24,10 @@ class TestBrowserWording(unittest.TestCase):
         self.assertEqual([(f["status"], "承認用に定義を固定（.pin.json）" in f["message"]) for f in rug], [("OK", True)])
         self.assertEqual(out["result"]["threats"]["rug_pull"], "OK")
         self.assertNotIn("verified_by_human", text)
+
+    def test_no_tools_wording_for_browser(self):
+        snap = json.loads(read("patent_clean.json"))
+        snap["tools"] = []
+        out = run(json.dumps(snap), read("questionnaire_patent.json"))
+        self.assertNotIn("token-env", json.dumps(out["result"], ensure_ascii=False))
+        self.assertTrue(any("提供元の資料からツール名と説明文" in c for c in out["result"]["conditions"]))

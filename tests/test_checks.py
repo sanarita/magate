@@ -90,6 +90,28 @@ class TestRugPull(unittest.TestCase):
         self.assertEqual(check_rugpull(load_snapshot(S("patent_clean.json")), None)[0].status, UNKNOWN)
 
 
+class TestNoTools(unittest.TestCase):
+    """ツール一覧を取得できていないときに「問題なし」と言わないこと（OAuth必須サーバの調査で判明）。"""
+    def _snap(self):
+        snap = load_snapshot(S("patent_clean.json"))
+        snap["tools"] = []
+        snap["observations"]["auth_required"] = True
+        return snap
+
+    def test_no_tools_is_unknown_not_ok(self):
+        res = evaluate(self._snap(), q())
+        self.assertEqual(res.threats["tool_poisoning"], UNKNOWN)
+        self.assertEqual(res.threats["shadowing"], UNKNOWN)
+        item = next(it for it in res.items if it.no == 6)
+        self.assertEqual(item.status, UNKNOWN)
+        self.assertFalse(any("検出されませんでした" in f.message for f in item.findings))
+        self.assertTrue(any("認証を求めたため" in f.message for f in item.findings))
+        self.assertTrue(any("token-env" in c for c in res.conditions))
+
+    def test_no_tools_never_allows(self):
+        self.assertNotEqual(evaluate(self._snap(), q()).verdict, "許可")
+
+
 class TestNoAuthMerged(unittest.TestCase):
     def _auth(self, unauth, method):
         snap = load_snapshot(S("patent_clean.json"))
