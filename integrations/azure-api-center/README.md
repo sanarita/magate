@@ -20,7 +20,7 @@ flowchart LR
 | `magate-verdict` | maGATE判定 | 許可／条件付き許可／不可／未審査 |
 | `magate-conditions` | maGATE許可条件 | 許可の条件（不可の場合は不可の理由）を番号付きで連結 |
 | `magate-reviewed-at` | maGATE審査日 | 台帳に書き戻した日（YYYY-MM-DD） |
-| `magate-owasp` | OWASP Agentic該当項目 | 要対応・NG になった審査項目の OWASP Agentic 番号 |
+| `magate-owasp` | OWASP Agentic該当項目 | NG・要対応・未確認になった審査項目の OWASP Agentic 番号を、状態ごとに記録（例：`要対応: ASI03, ASI04 / 未確認: ASI02, ASI03`） |
 
 いずれも必須にはしません。必須にすると、審査前の接続先を台帳に登録できなくなるためです（登録時は「未審査」を選ぶ）。
 
@@ -65,4 +65,5 @@ python integrations/azure-api-center/writeback.py --api-id microsoft-learn-mcp-s
 
 - `az apic api update` の `--custom-properties` はファイル指定（`@file`）に対応していないため、Azure CLI の省略記法で値を渡しています。値はシングルクォートで囲むので、`,` や `:` を含む条件文もそのまま記録できます。
 - 2026年10月時点の apic-extension（GA版）は `az apic api create --type` に `mcp` を指定できません。MCP サーバの登録は Portal で行い、メタデータの更新には種別を変更しない `update` を使っています。
+- 「未確認」も記録します。未確認は問題なしではなく、リスクを否定できていない状態のため、台帳から見えるようにしています。
 - 判定はルールベースのため、リスクスコアは記録しません（maGATE は判定理由をたどれる設計で、数値スコアを持たない）。

@@ -20,12 +20,14 @@ class TestToCustomProperties(unittest.TestCase):
         r = _result("条件付き許可", ["保持期間を確認すること", "地域を確認すること"],
                     items=[{"status": "WARN", "asi": ["ASI04", "ASI06"]},
                            {"status": "OK", "asi": ["ASI01"]},
-                           {"status": "FAIL", "asi": ["ASI02", "ASI04"]}])
+                           {"status": "FAIL", "asi": ["ASI02", "ASI04"]},
+                           {"status": "UNKNOWN", "asi": ["ASI08", "ASI10"]}])
         p = wb.to_custom_properties(r, reviewed_at="2026-10-20")
         self.assertEqual(p["magate-verdict"], "条件付き許可")
         self.assertEqual(p["magate-conditions"], "1. 保持期間を確認すること / 2. 地域を確認すること")
         self.assertEqual(p["magate-reviewed-at"], "2026-10-20")
-        self.assertEqual(p["magate-owasp"], "ASI02, ASI04, ASI06")  # OK の項目は含めない・重複なし
+        # 状態ごとに分けて記録し、OK の項目は含めない
+        self.assertEqual(p["magate-owasp"], "NG: ASI02, ASI04 / 要対応: ASI04, ASI06 / 未確認: ASI08, ASI10")
 
     def test_deny_puts_blockers_first(self):
         p = wb.to_custom_properties(_result("不可", ["条件A"], ["ポイズニングを検出"]))

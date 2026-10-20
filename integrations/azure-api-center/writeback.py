@@ -24,7 +24,8 @@ import tempfile
 
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
 VERDICTS = {"許可", "条件付き許可", "不可"}
-FLAGGED = {"WARN", "FAIL"}  # OWASP該当として台帳に載せる項目の状態
+# 台帳に載せる審査項目の状態と表示名（未確認も「リスクを否定できていない」ため載せる）
+FLAGGED = [("FAIL", "NG"), ("WARN", "要対応"), ("UNKNOWN", "未確認")]
 
 
 def to_custom_properties(result: dict, reviewed_at: str | None = None) -> dict:
@@ -37,13 +38,18 @@ def to_custom_properties(result: dict, reviewed_at: str | None = None) -> dict:
     lines += result.get("conditions") or []
     conditions = " / ".join(f"{i}. {c}" for i, c in enumerate(lines, 1)) or "なし"
 
-    asi = sorted({a for it in result.get("items") or [] if it.get("status") in FLAGGED for a in it.get("asi") or []})
+    items = result.get("items") or []
+    groups = []
+    for status, label in FLAGGED:
+        asi = sorted({a for it in items if it.get("status") == status for a in it.get("asi") or []})
+        if asi:
+            groups.append(f"{label}: {', '.join(asi)}")
 
     return {
         "magate-verdict": verdict,
         "magate-conditions": conditions,
         "magate-reviewed-at": reviewed_at or datetime.date.today().isoformat(),
-        "magate-owasp": ", ".join(asi) or "該当なし",
+        "magate-owasp": " / ".join(groups) or "該当なし",
     }
 
 
