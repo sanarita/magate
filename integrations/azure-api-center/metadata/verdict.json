@@ -1,0 +1,1 @@
+{"type":"string","title":"maGATE判定","oneOf":[{"const":"許可","description":""},{"const":"条件付き許可","description":""},{"const":"不可","description":""},{"const":"未審査","description":""}]}
