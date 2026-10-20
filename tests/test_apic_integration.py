@@ -45,6 +45,9 @@ class TestToCustomProperties(unittest.TestCase):
         s = wb.to_shorthand({"magate-verdict": "許可", "magate-conditions": "1. a, b: c / it's"})
         self.assertEqual(s, "{magate-verdict:'許可',magate-conditions:'1. a, b: c / it’s'}")
 
+    def test_shorthand_keeps_numbers(self):
+        self.assertEqual(wb.to_shorthand({"magate-risk-score": 50}), "{magate-risk-score:50}")
+
     def test_real_audit_result(self):
         """実在サーバのスナップショットを審査した結果がそのまま変換できること。"""
         from magate.collect import load_snapshot

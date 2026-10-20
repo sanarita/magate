@@ -1,0 +1,6 @@
+# prepare.py がコピーするもの（正本はリポジトリの元の場所）
+magate/
+writeback.py
+local.settings.json
+.python_packages/
+__pycache__/

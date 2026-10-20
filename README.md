@@ -12,7 +12,7 @@ Claude・Copilot などの生成AIを外部の MCP サーバ／API に接続し�
 
 - MCPサーバに加え、APIの仕様書（OpenAPI 3.x／Swagger 2.0、Copilot Studioのカスタムコネクタを含む）も審査可能
 - 判定はルールベース（LLMを使わない）。同じ入力なら必ず同じ結果になり、判定理由をたどれる
-- Python 標準ライブラリのみ（追加インストール不要）、自動テスト89件
+- Python 標準ライブラリのみ（追加インストール不要）、自動テスト99件
 - 審査対象のツールやAPIは一度も実行しない（読むのは MCP のツール一覧・OAuth メタデータ・API 仕様書だけ）
 - IPI Guard / skillscan と同じ「パターン採点＋外部抽出器の差し込み口」設計
 
@@ -224,6 +224,7 @@ Azure API Center を MCP サーバ・API の社内台帳として使い、maGATE
 python integrations/azure-api-center/writeback.py --api-id microsoft-learn-mcp-server --url https://learn.microsoft.com/api/mcp
 ```
 
+Azure Functions に配備すると、利用者が API Center に接続先を登録するだけで、定期的に自動で審査・記録されます。
 準備手順と仕組みは [integrations/azure-api-center/](integrations/azure-api-center/) を参照してください。
 
 ## 設計上の注意と限界
