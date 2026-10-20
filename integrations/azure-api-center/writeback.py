@@ -55,7 +55,9 @@ def to_custom_properties(result: dict, reviewed_at: str | None = None) -> dict:
 
 def to_shorthand(props: dict) -> str:
     """Azure CLI の省略記法に変換する。値はシングルクォートで囲み、区切り文字(, :)を含んでも壊れないようにする。"""
-    def q(v: str) -> str:
+    def q(v) -> str:
+        if isinstance(v, (int, float)) and not isinstance(v, bool):
+            return str(v)  # 数値型のメタデータは数値のまま渡す
         return "'" + str(v).replace("'", "’") + "'"
     return "{" + ",".join(f"{k}:{q(v)}" for k, v in props.items()) + "}"
 
@@ -102,14 +104,21 @@ def main(argv=None) -> int:
     print(json.dumps(props, ensure_ascii=False, indent=2))
 
     target = ["-g", a.resource_group, "-n", a.service_name, "--api-id", a.api_id]
-    cmd = ["apic", "api", "update", *target, "--custom-properties", to_shorthand(props)]
+    az = shutil.which("az")
+    if not az and not a.dry_run:
+        sys.exit("az コマンドが見つかりません。Azure CLI のインストールと PATH を確認してください。")
+
+    # `az apic api update --custom-properties` は既存の値を丸ごと置き換えるため、
+    # 審査対象URLなど他のメタデータを先に読み出して残す
+    current = {}
+    if az:
+        r = _run([az, "apic", "api", "show", *target, "--query", "customProperties", "-o", "json"])
+        if r.returncode == 0 and r.stdout.strip() not in ("", "null"):
+            current = json.loads(r.stdout)
+    cmd = ["apic", "api", "update", *target, "--custom-properties", to_shorthand({**current, **props})]
     if a.dry_run:
         print("\n[dry-run] az " + " ".join(cmd))
         return 0
-
-    az = shutil.which("az")
-    if not az:
-        sys.exit("az コマンドが見つかりません。Azure CLI のインストールと PATH を確認してください。")
     r = _run([az, *cmd])
     if r.returncode != 0:
         sys.exit(f"書き込みに失敗しました:\n{r.stderr}")

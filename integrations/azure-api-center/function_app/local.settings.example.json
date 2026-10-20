@@ -1,0 +1,12 @@
+{
+  "IsEncrypted": false,
+  "Values": {
+    "FUNCTIONS_WORKER_RUNTIME": "python",
+    "AzureWebJobsStorage": "UseDevelopmentStorage=true",
+    "AZURE_SUBSCRIPTION_ID": "<サブスクリプションID>",
+    "APIC_RESOURCE_GROUP": "magate-rg",
+    "APIC_SERVICE_NAME": "magate-apic",
+    "APIC_API_VERSION": "<手順0で確認した api-version>",
+    "MAGATE_SCHEDULE": "0 */15 * * * *"
+  }
+}

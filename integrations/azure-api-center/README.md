@@ -17,6 +17,7 @@ flowchart LR
 
 | メタデータ名 | 表示名 | 内容 |
 |---|---|---|
+| `magate-target-url` | 審査対象URL | 審査する MCP サーバの URL（登録時に入力。自動審査で使う） |
 | `magate-verdict` | maGATE判定 | 許可／条件付き許可／不可／未審査 |
 | `magate-conditions` | maGATE許可条件 | 許可の条件（不可の場合は不可の理由）を番号付きで連結 |
 | `magate-reviewed-at` | maGATE審査日 | 台帳に書き戻した日（YYYY-MM-DD） |
@@ -38,11 +39,14 @@ az apic metadata create -g magate-rg -n magate-apic --metadata-name "magate-verd
 az apic metadata create -g magate-rg -n magate-apic --metadata-name "magate-conditions"  --schema '@conditions.json' --assignments '@assign.json'
 az apic metadata create -g magate-rg -n magate-apic --metadata-name "magate-reviewed-at" --schema '@reviewed.json'   --assignments '@assign.json'
 az apic metadata create -g magate-rg -n magate-apic --metadata-name "magate-owasp"       --schema '@owasp.json'      --assignments '@assign.json'
+az apic metadata create -g magate-rg -n magate-apic --metadata-name "magate-target-url"  --schema '@target-url.json' --assignments '@assign.json'
 ```
 
 PowerShell では `@` が特殊文字なので、`'@verdict.json'` のようにシングルクォートで囲みます。
 
-接続先の登録は Azure Portal の API Center で「資産の登録 > MCP サーバー」から行います（ランタイムURLに接続先のURLを入力）。
+接続先の登録は Azure Portal の API Center で「資産の登録 > MCP サーバー」から行います。
+登録時に、カスタムメタデータの「審査対象URL」に接続先のURLを、「maGATE判定」に「未審査」を入力します。
+Portal の登録画面で入力するランタイムURLは、2026年10月時点で API（2024-03-01 / 2024-06-01-preview）から読み取れる場所に保存されないことを確認したため、審査用のURLは専用の欄に持たせています。
 
 ## 使い方
 
@@ -63,7 +67,77 @@ python integrations/azure-api-center/writeback.py --api-id microsoft-learn-mcp-s
 
 ## 実装上の注意
 
-- `az apic api update` の `--custom-properties` はファイル指定（`@file`）に対応していないため、Azure CLI の省略記法で値を渡しています。値はシングルクォートで囲むので、`,` や `:` を含む条件文もそのまま記録できます。
+- `az apic api update` の `--custom-properties` はファイル指定（`@file`）に対応していないため、Azure CLI の省略記法で値を渡しています。
+- 同オプションは既存のメタデータを丸ごと置き換えるため、writeback.py は書き込む前に現在の値を読み出し、審査対象URLなど他の項目を残したまま差し替えます。値はシングルクォートで囲むので、`,` や `:` を含む条件文もそのまま記録できます。
 - 2026年10月時点の apic-extension（GA版）は `az apic api create --type` に `mcp` を指定できません。MCP サーバの登録は Portal で行い、メタデータの更新には種別を変更しない `update` を使っています。
 - 「未確認」も記録します。未確認は問題なしではなく、リスクを否定できていない状態のため、台帳から見えるようにしています。
 - 判定はルールベースのため、リスクスコアは記録しません（maGATE は判定理由をたどれる設計で、数値スコアを持たない）。
+
+## Azure Functions で自動審査する
+
+`function_app/` を Azure Functions に配備すると、利用者は API Center に接続先を登録するだけで、審査と台帳への記録が自動で行われます。
+
+```mermaid
+flowchart LR
+  U[利用者が API Center に<br>MCPサーバを登録<br>判定：未審査] --> T[Functions が定期的に<br>台帳を確認]
+  T --> A[未審査のサーバを<br>maGATE で審査]
+  A --> M[判定・許可条件などを<br>台帳に書き戻す]
+```
+
+- 対象は、種別が MCP で、判定が空欄または「未審査」の資産です。審査には「審査対象URL」を使います（未入力でデプロイにランタイムURLがあれば、それを使う）。審査済みの資産は上書きしません（再審査したいときは判定を「未審査」に戻す）。
+- 接続先の取得に失敗した場合（認証が必要など）は、判定を「未審査」のまま、許可条件の欄に理由を記録します。同じ日には再試行しません。
+- 台帳の読み書きは Functions のマネージドIDで行います。個人の資格情報は使いません。
+- 登録時に即時ではなく定期確認にしているのは、API Center の Event Grid イベントが API 定義の追加・更新時にしか発生せず、Portal で登録した MCP サーバでは発生しないためです。
+
+### 0. 事前確認（手元のPC）
+
+管理用 REST API のバージョンは、手元の Azure CLI が実際に使っているものに合わせます。
+
+```powershell
+az apic api show -g magate-rg -n magate-apic --api-id microsoft-learn-mcp-server --debug 2>&1 | Select-String "api-version=" | Select-Object -First 1
+```
+
+表示された URL の `api-version=` の値を控えます。続けて、手元で動作確認します（台帳には書き込みません）。
+
+```powershell
+$env:AZURE_SUBSCRIPTION_ID = az account show --query id -o tsv
+$env:APIC_API_VERSION = "<控えた値>"
+uv run --with azure-identity python integrations/azure-api-center/function_app/reviewer.py --dry-run
+```
+
+### 1. 配備
+
+名前は例です。関数アプリ名は世界で一意、ストレージ名は英小文字と数字のみ（3〜24文字）にします。
+
+```powershell
+$APP = "magate-func-sanarita"
+$ST  = "magatefunc20261020"
+az storage account create -n $ST -g magate-rg -l eastus --sku Standard_LRS --allow-blob-public-access false
+az functionapp create -g magate-rg -n $APP --storage-account $ST --flexconsumption-location eastus --runtime python --runtime-version 3.12
+
+# マネージドIDを有効にし、API Center だけに書き込み権限を付ける
+$PRINCIPAL = az functionapp identity assign -g magate-rg -n $APP --query principalId -o tsv
+$APIC = az apic show -g magate-rg -n magate-apic --query id -o tsv
+az role assignment create --assignee-object-id $PRINCIPAL --assignee-principal-type ServicePrincipal --role Contributor --scope $APIC
+
+# 設定（実行間隔は15分ごと）
+az functionapp config appsettings set -g magate-rg -n $APP --settings AZURE_SUBSCRIPTION_ID=$env:AZURE_SUBSCRIPTION_ID APIC_RESOURCE_GROUP=magate-rg APIC_SERVICE_NAME=magate-apic APIC_API_VERSION=$env:APIC_API_VERSION "MAGATE_SCHEDULE=0 */15 * * * *"
+
+# maGATE 本体をコピーして配備（Azure Functions Core Tools が必要：winget install Microsoft.Azure.FunctionsCoreTools）
+python integrations/azure-api-center/function_app/prepare.py
+cd integrations/azure-api-center/function_app
+func azure functionapp publish $APP --python
+```
+
+権限は API Center のリソースだけを範囲にしています（サブスクリプション全体には付けない）。
+PowerShell では `$PID` が予約済みの変数のため、`$PRINCIPAL` という名前にしています。
+
+### 2. 動作確認
+
+Portal で資産を登録して判定を「未審査」にし、次の実行（最大15分後）を待つか、Portal の関数アプリ「関数 > magate_review」から手動で実行します。
+実行ログは関数アプリの「ログ」または Application Insights で確認できます。
+
+### 費用の目安
+
+Flex Consumption プランは実行した分だけの課金で、15分ごとの実行程度なら無料枠内に収まる想定です。
+ストレージアカウントと Application Insights に少額の費用がかかる場合があるため、予算アラートを設定しておくことを推奨します。
