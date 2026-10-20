@@ -87,6 +87,7 @@ flowchart LR
 - 対象は、種別が MCP で、判定が空欄または「未審査」の資産です。審査には「審査対象URL」を使います（未入力でデプロイにランタイムURLがあれば、それを使う）。審査済みの資産は上書きしません（再審査したいときは判定を「未審査」に戻す）。
 - 接続先の取得に失敗した場合（認証が必要など）は、判定を「未審査」のまま、許可条件の欄に理由を記録します。同じ日には再試行しません。
 - 台帳の読み書きは Functions のマネージドIDで行います。個人の資格情報は使いません。
+- 審査日は日本時間で記録します（Azure 上の時計は UTC のため変換。アプリ設定 `MAGATE_TZ` で変更可）。
 - 登録時に即時ではなく定期確認にしているのは、API Center の Event Grid イベントが API 定義の追加・更新時にしか発生せず、Portal で登録した MCP サーバでは発生しないためです。
 
 ### 0. 事前確認（手元のPC）
@@ -108,33 +109,68 @@ uv run --with azure-identity python integrations/azure-api-center/function_app/r
 ### 1. 配備
 
 名前は例です。関数アプリ名は世界で一意、ストレージ名は英小文字と数字のみ（3〜24文字）にします。
+新しい PowerShell ウィンドウでは環境変数が消えているため、最初に設定し直します。
 
 ```powershell
+$env:AZURE_SUBSCRIPTION_ID = az account show --query id -o tsv
 $APP = "magate-func-sanarita"
-$ST  = "magatefunc20261020"
+$ST  = "magatefunc20261021"
+
+# 新しいサブスクリプションでは、利用するサービスの登録が必要（すべて Registered になるまで待つ）
+az provider register --namespace Microsoft.Web
+az provider register --namespace Microsoft.Storage
+az provider register --namespace Microsoft.Insights
+az provider register --namespace Microsoft.OperationalInsights
+az provider show -n Microsoft.Storage --query registrationState -o tsv
+
+# 関数アプリが使うストレージ（最小 TLS を 1.2 に引き上げる。既定は 1.0）
 az storage account create -n $ST -g magate-rg -l eastus --sku Standard_LRS --allow-blob-public-access false
-az functionapp create -g magate-rg -n $APP --storage-account $ST --flexconsumption-location eastus --runtime python --runtime-version 3.12
+az storage account update -n $ST -g magate-rg --min-tls-version TLS1_2
+$STID = az storage account show -n $ST -g magate-rg --query id -o tsv
+
+# 関数アプリ（Flex Consumption）。専用のリソースグループに作る
+az group create -n magate-func-rg -l eastus
+az functionapp create -g magate-func-rg -n $APP --storage-account $STID --flexconsumption-location eastus2 --runtime python --runtime-version 3.12
+az functionapp update -g magate-func-rg -n $APP --set httpsOnly=true
 
 # マネージドIDを有効にし、API Center だけに書き込み権限を付ける
-$PRINCIPAL = az functionapp identity assign -g magate-rg -n $APP --query principalId -o tsv
+$PRINCIPAL = az functionapp identity assign -g magate-func-rg -n $APP --query principalId -o tsv
 $APIC = az apic show -g magate-rg -n magate-apic --query id -o tsv
 az role assignment create --assignee-object-id $PRINCIPAL --assignee-principal-type ServicePrincipal --role Contributor --scope $APIC
+az role assignment list --assignee $PRINCIPAL --all -o table
 
-# 設定（実行間隔は15分ごと）
-az functionapp config appsettings set -g magate-rg -n $APP --settings AZURE_SUBSCRIPTION_ID=$env:AZURE_SUBSCRIPTION_ID APIC_RESOURCE_GROUP=magate-rg APIC_SERVICE_NAME=magate-apic APIC_API_VERSION=$env:APIC_API_VERSION "MAGATE_SCHEDULE=0 */15 * * * *"
+# 設定（実行間隔は15分ごと、審査日は日本時間）
+az functionapp config appsettings set -g magate-func-rg -n $APP --settings AZURE_SUBSCRIPTION_ID=$env:AZURE_SUBSCRIPTION_ID APIC_RESOURCE_GROUP=magate-rg APIC_SERVICE_NAME=magate-apic APIC_API_VERSION=2024-03-01 "MAGATE_SCHEDULE=0 */15 * * * *" MAGATE_TZ=Asia/Tokyo
 
 # maGATE 本体をコピーして配備（Azure Functions Core Tools が必要：winget install Microsoft.Azure.FunctionsCoreTools）
 python integrations/azure-api-center/function_app/prepare.py
 cd integrations/azure-api-center/function_app
 func azure functionapp publish $APP --python
+cd ..\..\..
 ```
 
-権限は API Center のリソースだけを範囲にしています（サブスクリプション全体には付けない）。
-PowerShell では `$PID` が予約済みの変数のため、`$PRINCIPAL` という名前にしています。
+最後に `Functions in magate-func-sanarita:` の下に `magate_review - [timerTrigger]` と表示されれば配備完了です。
+
+#### 構築時に遭遇したことと対処（2026年10月）
+
+| 事象 | 原因と対処 |
+|---|---|
+| ストレージ作成で `SubscriptionNotFound` | サービス（Microsoft.Storage）の登録が処理中だった。`Registered` になるのを待って再実行 |
+| 関数アプリ作成で `Cannot acquire exclusive lock to create or update this server farm` が繰り返し発生 | 新しいサブスクリプションの eastus で解消しなかった。専用のリソースグループに分け、リージョンを eastus2 にして作成できた。API Center とは REST API で通信するため、リージョンが違っても動作に影響はない |
+| 作成直後の `httpsOnly` が false、ストレージの最小 TLS が 1.0 | 既定値のまま使わず、HTTPS のみ・TLS 1.2 に変更（関数はタイマー起動のみで外部からの呼び出し口はないが、許可しておく理由がないため） |
+| `az functionapp config appsettings set` の結果で値が `null` と表示される | Azure CLI が秘密情報を出さないよう値を伏せて表示する仕様。設定自体は反映されている |
+| 配備時に「手元の Python 3.13 と Azure の 3.12 が違う」と警告 | ライブラリは Azure 側（3.12）でインストールされる（remote build）ため、問題なし |
+| Portal の MCP サーバ登録で入力したランタイムURLが、API から読めない | デプロイ・環境のどちらにも保存されていなかった（API 2024-03-01 / 2024-06-01-preview で確認）。審査用のURLは専用のメタデータ欄（審査対象URL）に持たせた |
 
 ### 2. 動作確認
 
-Portal で資産を登録して判定を「未審査」にし、次の実行（最大15分後）を待つか、Portal の関数アプリ「関数 > magate_review」から手動で実行します。
+Portal で資産を登録し、「審査対象URL」にURLを、「maGATE判定」に「未審査」を入力して、次の実行（最大15分後）を待つか、Portal の関数アプリ「関数 > magate_review」の「テストと実行」から手動で実行します。
+審査済みの資産を再審査する場合は、判定を「未審査」に戻します。CLI で戻すときは、`az apic api update --custom-properties` が既存の値を丸ごと置き換えるため、審査対象URLも一緒に指定します。
+
+```powershell
+az apic api update -g magate-rg -n magate-apic --api-id microsoft-learn-mcp-server --custom-properties "{magate-verdict:'未審査',magate-target-url:'https://learn.microsoft.com/api/mcp'}"
+az apic api show -g magate-rg -n magate-apic --api-id microsoft-learn-mcp-server --query customProperties
+```
 実行ログは関数アプリの「ログ」または Application Insights で確認できます。
 
 ### 費用の目安

@@ -78,6 +78,22 @@ class TestRunOnce(unittest.TestCase):
         self.assertEqual(seen, ["https://meta/mcp"])
 
 
+class TestToday(unittest.TestCase):
+    def test_default_is_japan_time(self):
+        import datetime
+        os.environ.pop("MAGATE_TZ", None)
+        jst = datetime.timezone(datetime.timedelta(hours=9))
+        self.assertEqual(reviewer.today_local(), datetime.datetime.now(jst).date().isoformat())
+
+    def test_can_switch_to_utc(self):
+        import datetime
+        os.environ["MAGATE_TZ"] = "UTC"
+        try:
+            self.assertEqual(reviewer.today_local(), datetime.datetime.now(datetime.timezone.utc).date().isoformat())
+        finally:
+            os.environ.pop("MAGATE_TZ", None)
+
+
 class TestClient(unittest.TestCase):
     def test_update_keeps_other_fields(self):
         class Cred:

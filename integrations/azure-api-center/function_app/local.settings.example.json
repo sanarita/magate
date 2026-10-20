@@ -7,6 +7,7 @@
     "APIC_RESOURCE_GROUP": "magate-rg",
     "APIC_SERVICE_NAME": "magate-apic",
     "APIC_API_VERSION": "<手順0で確認した api-version>",
-    "MAGATE_SCHEDULE": "0 */15 * * * *"
+    "MAGATE_SCHEDULE": "0 */15 * * * *",
+    "MAGATE_TZ": "Asia/Tokyo"
   }
 }

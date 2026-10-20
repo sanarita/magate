@@ -21,8 +21,20 @@ for _p in (os.path.join(_HERE, ".."), os.path.join(_HERE, "..", "..", "..")):
 from writeback import to_custom_properties  # noqa: E402
 
 PENDING = {None, "", "未審査"}
+DEFAULT_TZ = "Asia/Tokyo"  # 台帳を見るのは日本の利用者なので、審査日は日本時間で記録する
 TARGET_URL = "magate-target-url"  # 登録時に入力してもらう審査対象のURL（デプロイのURLより優先）
 FETCH_FAILED = "自動審査で接続先を取得できませんでした"
+
+
+def today_local() -> str:
+    """審査日（YYYY-MM-DD）を返す。Azure 上の時計は UTC のため、MAGATE_TZ（既定は日本時間）に変換する。"""
+    name = os.environ.get("MAGATE_TZ", DEFAULT_TZ)
+    try:
+        from zoneinfo import ZoneInfo
+        tz = ZoneInfo(name)
+    except Exception:  # noqa: BLE001  タイムゾーンのデータが無い環境でも日本時間は固定の時差で求める
+        tz = datetime.timezone(datetime.timedelta(hours=9)) if name == DEFAULT_TZ else datetime.timezone.utc
+    return datetime.datetime.now(tz).date().isoformat()
 
 
 def audit_url(url: str, name: str | None = None) -> dict:
@@ -38,7 +50,7 @@ def audit_url(url: str, name: str | None = None) -> dict:
 
 def run_once(client, audit=audit_url, today: str | None = None, dry_run: bool = False) -> list[str]:
     """未審査のMCPサーバを1回分処理し、処理内容のログ行を返す。"""
-    today = today or datetime.date.today().isoformat()
+    today = today or today_local()
     log = []
     for api in client.list_apis():
         name, p = api.get("name"), api.get("properties") or {}
