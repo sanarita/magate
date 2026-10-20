@@ -12,7 +12,7 @@ Claude・Copilot などの生成AIを外部の MCP サーバ／API に接続し�
 
 - MCPサーバに加え、APIの仕様書（OpenAPI 3.x／Swagger 2.0、Copilot Studioのカスタムコネクタを含む）も審査可能
 - 判定はルールベース（LLMを使わない）。同じ入力なら必ず同じ結果になり、判定理由をたどれる
-- Python 標準ライブラリのみ（追加インストール不要）、自動テスト83件
+- Python 標準ライブラリのみ（追加インストール不要）、自動テスト89件
 - 審査対象のツールやAPIは一度も実行しない（読むのは MCP のツール一覧・OAuth メタデータ・API 仕様書だけ）
 - IPI Guard / skillscan と同じ「パターン採点＋外部抽出器の差し込み口」設計
 
@@ -214,6 +214,17 @@ maGATE 自体を MCP サーバとして Claude Desktop に登録すると、チ�
 - maGATE 自身のツール定義も、自分の審査を通ることをテストで確認しています（`test_self_audit`）。
 
 > 社内PCで使う場合は、Claude Desktop へのローカルMCPサーバ追加と、外部サーバへのアクセスが社内ルール上問題ないか、情報システム部門に確認してください。
+
+## Azure API Center との連携
+
+Azure API Center を MCP サーバ・API の社内台帳として使い、maGATE の判定・許可条件・審査日・OWASP Agentic 該当項目を、各接続先のメタデータとして記録できます。
+台帳を見れば「この接続先はどういう条件なら使ってよいか」が誰にでも分かる状態にします。
+
+```powershell
+python integrations/azure-api-center/writeback.py --api-id microsoft-learn-mcp-server --url https://learn.microsoft.com/api/mcp
+```
+
+準備手順と仕組みは [integrations/azure-api-center/](integrations/azure-api-center/) を参照してください。
 
 ## 設計上の注意と限界
 
