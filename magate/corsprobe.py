@@ -12,6 +12,7 @@ import urllib.request
 
 from . import __version__
 from .collect import PROTOCOL_VERSION, UA, _parse_sse
+from .netguard import BlockedURL, open_url, read_limited
 
 DEFAULT_ORIGIN = "https://sanarita.github.io"
 TIMEOUT = 15
@@ -20,10 +21,10 @@ TIMEOUT = 15
 def _req(url, method, headers, body=None):
     r = urllib.request.Request(url, data=body, method=method, headers={"User-Agent": UA, **headers})
     try:
-        with urllib.request.urlopen(r, timeout=TIMEOUT) as res:
-            return res.status, {k.lower(): v for k, v in res.headers.items()}, res.read().decode("utf-8", "replace")
+        with open_url(r, TIMEOUT) as res:
+            return res.status, {k.lower(): v for k, v in res.headers.items()}, read_limited(res).decode("utf-8", "replace")
     except urllib.error.HTTPError as e:
-        return e.code, {k.lower(): v for k, v in (e.headers or {}).items()}, e.read().decode("utf-8", "replace")
+        return e.code, {k.lower(): v for k, v in (e.headers or {}).items()}, read_limited(e).decode("utf-8", "replace")
 
 
 def _list(v):
@@ -118,8 +119,15 @@ def probe(url: str, origin: str = DEFAULT_ORIGIN) -> dict:
         res["tools"] = len(msg["result"].get("tools", []))
         steps.append(f"ツール一覧: {res['tools']} 件")
         return done("可")
+    except BlockedURL as e:
+        steps.append(f"maGATEの関所で停止: {e}")
+        return done("不可（関所で停止）")
     except (urllib.error.URLError, TimeoutError, OSError) as e:
-        steps.append(f"接続エラー: {getattr(e, 'reason', e)}")
+        reason = getattr(e, "reason", e)
+        if isinstance(reason, BlockedURL):
+            steps.append(f"maGATEの関所で停止: {reason}")
+            return done("不可（関所で停止）")
+        steps.append(f"接続エラー: {reason}")
         return done("不可（接続できない）")
 
 

@@ -14,6 +14,7 @@ import urllib.parse
 import urllib.request
 
 from . import __version__
+from .netguard import BlockedURL, derived_url_ok, open_url, read_limited
 
 PROTOCOL_VERSION = "2025-11-25"
 UA = f"magate/{__version__} (+security review; read-only)"
@@ -42,11 +43,16 @@ def _parse_sse(body: str, want_id) -> dict | None:
 def _http(url, method="GET", body=None, headers=None):
     req = urllib.request.Request(url, data=body, method=method, headers={"User-Agent": UA, **(headers or {})})
     try:
-        with urllib.request.urlopen(req, timeout=TIMEOUT) as r:
-            return r.status, dict(r.headers), r.read().decode("utf-8", "replace")
+        with open_url(req, TIMEOUT) as r:
+            return r.status, dict(r.headers), read_limited(r).decode("utf-8", "replace")
     except urllib.error.HTTPError as e:
-        return e.code, dict(e.headers or {}), e.read().decode("utf-8", "replace")
+        with e:
+            return e.code, dict(e.headers or {}), read_limited(e).decode("utf-8", "replace")
+    except BlockedURL as e:
+        raise FetchError(str(e)) from None
     except urllib.error.URLError as e:
+        if isinstance(e.reason, BlockedURL):   # リダイレクト先で止めた場合
+            raise FetchError(str(e.reason)) from None
         raise FetchError(f"{url}: {e.reason}") from e
 
 
@@ -120,12 +126,14 @@ def _well_known(base_url, suffix):
 
 def fetch_oauth(url: str, www_auth: str | None = None) -> dict:
     prm, prm_url = None, _resource_metadata_url(www_auth)
+    if prm_url and not derived_url_ok(prm_url):
+        prm_url = None   # 接続先が指定したメタデータURLは HTTPS のときだけ辿る
     for cand in ([prm_url] if prm_url else []) + _well_known(url, "oauth-protected-resource"):
         prm = _get_json(cand)
         if prm:
             break
     asm = None
-    for issuer in (prm or {}).get("authorization_servers", [])[:1]:
+    for issuer in [i for i in (prm or {}).get("authorization_servers", []) if isinstance(i, str) and derived_url_ok(i)][:1]:
         for cand in _as_metadata_candidates(issuer):
             asm = _get_json(cand)
             if asm:
