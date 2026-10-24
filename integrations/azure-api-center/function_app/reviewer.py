@@ -48,6 +48,27 @@ def audit_url(url: str, name: str | None = None) -> dict:
     return json.loads(to_json(evaluate(snap, q, [], None, autofill=info)))
 
 
+def _is_blocked(e: Exception) -> bool:
+    try:
+        from magate.collect import BlockedFetch
+    except ImportError:
+        return False
+    return isinstance(e, BlockedFetch)
+
+
+def failure_note(e: Exception) -> str:
+    """台帳の「許可条件」欄に残す、取得できなかった理由と次にやること。
+
+    関所で止めた場合（登録されたURLが社内・内部のアドレス）と、それ以外（認証が必要など）では
+    対応が違うため書き分ける。どちらも先頭は FETCH_FAILED（同じ日に再試行しない判定に使う）。
+    """
+    if _is_blocked(e):
+        return (f"{FETCH_FAILED}（関所で停止: {e}）。"
+                "登録された審査対象URLが社内・内部のアドレスを指しています。URLが正しいか登録者に確認すること"
+                "（社内の接続先を意図して審査する場合のみ、関数アプリの設定 MAGATE_ALLOW_PRIVATE=1 を検討）")
+    return f"{FETCH_FAILED}（{type(e).__name__}: {e}）。コマンドライン版で認証情報を指定して審査すること"
+
+
 def run_once(client, audit=audit_url, today: str | None = None, dry_run: bool = False) -> list[str]:
     """未審査のMCPサーバを1回分処理し、処理内容のログ行を返す。"""
     today = today or today_local()
@@ -70,10 +91,8 @@ def run_once(client, audit=audit_url, today: str | None = None, dry_run: bool = 
             new = to_custom_properties(audit(url, name=p.get("title") or name), reviewed_at=today)
             msg = f"{name}: {new['magate-verdict']}"
         except Exception as e:  # noqa: BLE001  取得失敗（認証必須・接続拒否など）は台帳に理由を残す
-            new = {"magate-verdict": "未審査", "magate-reviewed-at": today,
-                   "magate-conditions": f"{FETCH_FAILED}（{type(e).__name__}: {e}）。"
-                                        "コマンドライン版で認証情報を指定して審査すること"}
-            msg = f"{name}: 取得失敗 {type(e).__name__}"
+            new = {"magate-verdict": "未審査", "magate-reviewed-at": today, "magate-conditions": failure_note(e)}
+            msg = f"{name}: {'関所で停止' if _is_blocked(e) else '取得失敗 ' + type(e).__name__}"
         if not dry_run:
             client.update_custom_properties(name, new)
         log.append(msg + ("（dry-run・未書き込み）" if dry_run else ""))

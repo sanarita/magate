@@ -25,6 +25,10 @@ class FetchError(RuntimeError):
     pass
 
 
+class BlockedFetch(FetchError):
+    """関所（netguard）が接続を止めた。認証不足などの取得失敗と区別して伝えるために分けている。"""
+
+
 def _parse_sse(body: str, want_id) -> dict | None:
     """text/event-stream の data: 行から、指定IDのJSON-RPC応答を取り出す。"""
     for block in re.split(r"\r?\n\r?\n", body):
@@ -49,10 +53,10 @@ def _http(url, method="GET", body=None, headers=None):
         with e:
             return e.code, dict(e.headers or {}), read_limited(e).decode("utf-8", "replace")
     except BlockedURL as e:
-        raise FetchError(str(e)) from None
+        raise BlockedFetch(str(e)) from None
     except urllib.error.URLError as e:
         if isinstance(e.reason, BlockedURL):   # リダイレクト先で止めた場合
-            raise FetchError(str(e.reason)) from None
+            raise BlockedFetch(str(e.reason)) from None
         raise FetchError(f"{url}: {e.reason}") from e
 
 
