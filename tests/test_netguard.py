@@ -60,6 +60,16 @@ class TestCheckUrl(unittest.TestCase):
         with mock.patch.dict(os.environ, ALLOW):
             check_url("http://10.0.0.5/mcp")
 
+    def test_cli_message_keeps_hint_and_strip_removes_it(self):
+        """CLI では案内を表示し、台帳など別の案内を出す場所では取り除ける。"""
+        with mock.patch.dict(os.environ, DENY):
+            with self.assertRaises(BlockedURL) as cm:
+                check_url("http://169.254.169.254/")
+        self.assertIn(netguard.HINT, str(cm.exception))
+        stripped = netguard.strip_hint(str(cm.exception))
+        self.assertNotIn("MAGATE_ALLOW_PRIVATE", stripped)
+        self.assertTrue(stripped.endswith("（169.254.169.254）"))
+
     def test_http_layer_raises_fetch_error(self):
         with mock.patch.dict(os.environ, DENY):
             with self.assertRaises(FetchError) as cm:

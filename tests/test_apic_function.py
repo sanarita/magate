@@ -70,7 +70,8 @@ class TestRunOnce(unittest.TestCase):
         from magate.collect import BlockedFetch
 
         def blocked(url, name=None):
-            raise BlockedFetch("公開されていないアドレスには接続しません: 169.254.169.254（169.254.169.254）")
+            from magate.netguard import HINT
+            raise BlockedFetch(f"公開されていないアドレスには接続しません: 169.254.169.254（169.254.169.254）。{HINT}")
         c = FakeClient([_api("ssrf-test")], {"ssrf-test": "http://169.254.169.254/latest/meta-data/"})
         log = reviewer.run_once(c, audit=blocked, today="2026-10-24")
         note = c.updates["ssrf-test"]["magate-conditions"]
@@ -78,6 +79,8 @@ class TestRunOnce(unittest.TestCase):
         self.assertIn("関所で停止", note)
         self.assertIn("登録者に確認", note)
         self.assertNotIn("認証情報", note)
+        self.assertEqual(note.count("MAGATE_ALLOW_PRIVATE"), 1)   # 案内は1回だけ
+        self.assertIn("169.254.169.254", note)                    # 止めた宛先は残す
         self.assertEqual(log, ["ssrf-test: 関所で停止"])
 
     def test_real_blocked_fetch_is_classified(self):
@@ -87,7 +90,9 @@ class TestRunOnce(unittest.TestCase):
         with mock.patch.dict(os.environ, {"MAGATE_ALLOW_PRIVATE": "0"}):
             with self.assertRaises(BlockedFetch) as cm:
                 fetch_http("http://169.254.169.254/latest/meta-data/")
-        self.assertIn("関所で停止", reviewer.failure_note(cm.exception))
+        note = reviewer.failure_note(cm.exception)
+        self.assertIn("関所で停止", note)
+        self.assertEqual(note.count("MAGATE_ALLOW_PRIVATE"), 1)
 
     def test_missing_url_and_dry_run(self):
         c = FakeClient([_api("no-url"), _api("ok")], {"ok": "https://d/mcp"})
