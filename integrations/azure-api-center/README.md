@@ -44,8 +44,15 @@ az apic metadata create -g magate-rg -n magate-apic --metadata-name "magate-targ
 
 PowerShell では `@` が特殊文字なので、`'@verdict.json'` のようにシングルクォートで囲みます。
 
-接続先の登録は Azure Portal の API Center で「資産の登録 > MCP サーバー」から行います。
-登録時に、カスタムメタデータの「審査対象URL」に接続先のURLを、「maGATE判定」に「未審査」を入力します。
+接続先の登録は、`register.py` で行うか、Azure Portal の API Center で「資産の登録 > MCP サーバー」から行います。
+
+```powershell
+python integrations/azure-api-center/register.py --url https://learn.microsoft.com/api/mcp --title "Microsoft Learn MCP"
+```
+
+`register.py` は種別 MCP・判定「未審査」・審査対象URLを入れた資産を作ります（`az apic api create` は種別 mcp を指定できないため、管理用 REST API を `az rest` で呼んでいます）。同じIDの資産があれば上書きせずに中止します。登録前に、Functions の関所がそのURLを止めるかどうかも表示します。`--dry-run` で送る内容だけを確認できます。
+
+Portal で登録する場合は、カスタムメタデータの「審査対象URL」に接続先のURLを、「maGATE判定」に「未審査」を入力します。
 Portal の登録画面で入力するランタイムURLは、2026年10月時点で API（2024-03-01 / 2024-06-01-preview）から読み取れる場所に保存されないことを確認したため、審査用のURLは専用の欄に持たせています。
 
 ## 使い方
