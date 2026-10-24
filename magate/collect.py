@@ -157,7 +157,11 @@ def fetch_http(url: str, token: str | None = None, name: str | None = None) -> d
     }, initialized=False)
     obs = {"https": url.lower().startswith("https://"), "token_supplied": bool(token)}
     tools, server_info = [], {}
-    www_auth = {k.lower(): v for k, v in s.last_headers.items()}.get("www-authenticate")
+    low = {k.lower(): v for k, v in s.last_headers.items()}
+    www_auth = low.get("www-authenticate")
+    for h, key in (("server", "server_header"), ("x-powered-by", "x_powered_by")):
+        if low.get(h):
+            obs[key] = low[h][:120]  # 応答ヘッダーの自己申告（受動的に読むだけ）
     if "_http_status" in init:
         obs["initialize_status"] = init["_http_status"]
         obs["auth_required"] = init["_http_status"] in (401, 403)

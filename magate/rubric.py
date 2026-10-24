@@ -1,4 +1,4 @@
-"""評価ルーブリック：7項目を OWASP Agentic (ASI) / LLM Top 10 に紐づけ、3段階で総合判定する。
+"""評価ルーブリック：7項目（＋サプライチェーンの証拠がある場合は8項目）を OWASP Agentic (ASI) / LLM Top 10 に紐づけ、3段階で総合判定する。
 
 ASI番号との対応は本ツールの設計上の割り当て（OWASP公式の対応表ではない）。
 """
@@ -8,7 +8,8 @@ import re
 import urllib.parse
 from dataclasses import dataclass, field
 
-from .checks import check_auth, check_poisoning, check_rugpull, check_scopes, check_shadowing
+from .checks import check_auth, check_poisoning, check_rugpull, check_scopes, check_shadowing, check_supply_chain
+from .checks.supply_chain import has_evidence as _has_supply_evidence
 from .model import FAIL, OK, UNKNOWN, WARN, Finding, worst
 
 PERMIT, CONDITIONAL, DENY = "許可", "条件付き許可", "不可"
@@ -182,7 +183,8 @@ THREAT_LABELS = {
 }
 
 
-def evaluate(snapshot: dict, q: dict, inventory=(), pins_dir=None, extra_scanners=(), autofill: dict | None = None) -> Result:
+def evaluate(snapshot: dict, q: dict, inventory=(), pins_dir=None, extra_scanners=(), autofill: dict | None = None,
+             exploited=()) -> Result:
     poison = check_poisoning(snapshot, extra_scanners)
     shadow = check_shadowing(snapshot, list(inventory))
     rug = check_rugpull(snapshot, pins_dir)
@@ -198,6 +200,9 @@ def evaluate(snapshot: dict, q: dict, inventory=(), pins_dir=None, extra_scanner
         Item(6, "ツール定義の内容", ["ASI01", "ASI02", "ASI04"], ["LLM01", "LLM03"], poison + shadow + rug),
         Item(7, "監査ログの有無", ["ASI08", "ASI10"], ["LLM06"], eval_audit(snapshot, q)),
     ]
+    if _has_supply_evidence(snapshot):  # --package / --lockfile 指定時、またはヘッダーで版数が見えた時だけ評価する
+        items.append(Item(8, "既知脆弱性・実行環境（サプライチェーン）", ["ASI04"], ["LLM03"],
+                          check_supply_chain(snapshot, exploited)))
     all_f = [f for it in items for f in it.findings]
     threats = {k: worst(f.status for f in all_f if f.threat == k) for k in THREAT_LABELS}
 
