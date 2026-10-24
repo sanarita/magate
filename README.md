@@ -253,6 +253,7 @@ Azure API Center を MCP サーバ・API の社内台帳として使い、maGATE
 
 ```powershell
 python integrations/azure-api-center/writeback.py --api-id microsoft-learn-mcp-server --url https://learn.microsoft.com/api/mcp
+python integrations/azure-api-center/register.py --url https://learn.microsoft.com/api/mcp --title "Microsoft Learn MCP"
 ```
 
 Azure Functions に配備すると、利用者が API Center に接続先を登録するだけで、定期的に自動で審査・記録されます。
