@@ -169,6 +169,8 @@ def cmd_draft_q(a):
 def main(argv=None) -> int:
     p = argparse.ArgumentParser(prog="magate", description="maGATE — MCP・API接続先のセキュリティ審査ツール")
     p.add_argument("--version", action="version", version=f"maGATE {__version__}")
+    p.add_argument("--allow-private", action="store_true",
+                   help="社内・ローカルのアドレスへの接続を許可する（既定は拒否。社内のMCPサーバを審査するときだけ使う）")
     sub = p.add_subparsers(dest="cmd", required=True)
 
     s = sub.add_parser("snapshot", help="ツール定義とOAuthメタデータを取得して保存")
@@ -219,6 +221,9 @@ def main(argv=None) -> int:
     s.set_defaults(func=cmd_draft_q)
 
     a = p.parse_args(argv)
+    if a.allow_private:
+        from .netguard import ENV
+        os.environ[ENV] = "1"
     if getattr(a, "model", "x") is None:
         from .policy_agent import DEFAULT_MODEL
         a.model = DEFAULT_MODEL
