@@ -26,6 +26,8 @@ import urllib.request
 
 MAX_BYTES = 5 * 1024 * 1024
 ENV = "MAGATE_ALLOW_PRIVATE"
+# 停止理由の末尾に付ける、CLI利用者向けの案内。台帳など別の案内を出す場所では取り除く（strip_hint）
+HINT = f"社内の接続先を審査する場合は {ENV}=1 を設定してください"
 
 
 class BlockedURL(ValueError):
@@ -58,8 +60,12 @@ def check_url(url: str) -> None:
     for info in infos:
         ip = ipaddress.ip_address(info[4][0].split("%", 1)[0])
         if _blocked_ip(ip):
-            raise BlockedURL(f"公開されていないアドレスには接続しません: {u.hostname}（{ip}）。"
-                             f"社内の接続先を審査する場合は {ENV}=1 を設定してください")
+            raise BlockedURL(f"公開されていないアドレスには接続しません: {u.hostname}（{ip}）。{HINT}")
+
+
+def strip_hint(message: str) -> str:
+    """停止理由から、CLI利用者向けの案内（HINT）を取り除く。"""
+    return message.replace(f"。{HINT}", "").replace(HINT, "").strip()
 
 
 def derived_url_ok(url: str) -> bool:

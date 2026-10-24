@@ -63,7 +63,8 @@ def failure_note(e: Exception) -> str:
     対応が違うため書き分ける。どちらも先頭は FETCH_FAILED（同じ日に再試行しない判定に使う）。
     """
     if _is_blocked(e):
-        return (f"{FETCH_FAILED}（関所で停止: {e}）。"
+        from magate.netguard import strip_hint  # 関所の案内は下の文と重複するため除く
+        return (f"{FETCH_FAILED}（関所で停止: {strip_hint(str(e))}）。"
                 "登録された審査対象URLが社内・内部のアドレスを指しています。URLが正しいか登録者に確認すること"
                 "（社内の接続先を意図して審査する場合のみ、関数アプリの設定 MAGATE_ALLOW_PRIVATE=1 を検討）")
     return f"{FETCH_FAILED}（{type(e).__name__}: {e}）。コマンドライン版で認証情報を指定して審査すること"

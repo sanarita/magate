@@ -4,6 +4,11 @@
 
 **▶ ブラウザで試す：https://sanarita.github.io/magate/** （インストール不要・入力は外部に送信されません）
 
+**最近の更新**
+- v0.7.0：Node2Shell・PHP2Shell（2026年10月）を受けて、[既知脆弱性・実行環境のチェック](#既知脆弱性実行環境のチェックv070)を追加
+- v0.7.1：maGATE 自身が SSRF の踏み台にならないよう、通信に[関所](#設計上の注意と限界)を追加（Azure Functions の本番環境で動作を確認）
+- v0.7.2：Azure API Center の台帳に CLI から登録できる `register.py`、関所で止めたときの台帳メッセージの整理
+
 関連ツール：[IPI Guard Chat](https://github.com/sanarita/ipi-guard-chat)（文書の検査）／[skillscan](https://github.com/sanarita/skillscan)（スキルの検査）
 
 Claude・Copilot などの生成AIを外部の MCP サーバ／API に接続してよいかを審査し、
@@ -12,7 +17,7 @@ Claude・Copilot などの生成AIを外部の MCP サーバ／API に接続し�
 
 - MCPサーバに加え、APIの仕様書（OpenAPI 3.x／Swagger 2.0、Copilot Studioのカスタムコネクタを含む）も審査可能
 - 判定はルールベース（LLMを使わない）。同じ入力なら必ず同じ結果になり、判定理由をたどれる
-- Python 標準ライブラリのみ（追加インストール不要）、自動テスト135件
+- Python 標準ライブラリのみ（追加インストール不要）、自動テスト136件
 - 審査対象のツールやAPIは一度も実行しない（読むのは MCP のツール一覧・OAuth メタデータ・API 仕様書だけ）
 - IPI Guard / skillscan と同じ「パターン採点＋外部抽出器の差し込み口」設計
 
@@ -95,7 +100,7 @@ flowchart TB
   end
   subgraph AUD[審査]
     direction LR
-    B[証拠収集<br>tools/list・OAuthメタデータ] --> C[MCP固有<br>5脅威チェック] --> D[ルーブリック<br>7項目] --> R[審査レポート<br>許可／条件付き／不可]
+    B[証拠収集<br>tools/list・OAuthメタデータ<br>パッケージ情報（任意）] --> C[MCP固有<br>5脅威チェック] --> D[ルーブリック<br>7項目＋任意1項目] --> R[審査レポート<br>許可／条件付き／不可]
   end
   subgraph AFTER[承認後]
     direction LR
@@ -252,8 +257,10 @@ Azure API Center を MCP サーバ・API の社内台帳として使い、maGATE
 台帳を見れば「この接続先はどういう条件なら使ってよいか」が誰にでも分かる状態にします。
 
 ```powershell
-python integrations/azure-api-center/writeback.py --api-id microsoft-learn-mcp-server --url https://learn.microsoft.com/api/mcp
+# 台帳に未審査で登録する（Azure Functions が自動で審査して書き戻す）
 python integrations/azure-api-center/register.py --url https://learn.microsoft.com/api/mcp --title "Microsoft Learn MCP"
+# その場で審査して、登録済みの資産に結果を書き戻す（Functions を使わない場合）
+python integrations/azure-api-center/writeback.py --api-id microsoft-learn-mcp-server --url https://learn.microsoft.com/api/mcp
 ```
 
 Azure Functions に配備すると、利用者が API Center に接続先を登録するだけで、定期的に自動で審査・記録されます。
