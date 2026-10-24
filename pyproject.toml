@@ -1,7 +1,7 @@
 [project]
 name = "magate"
-version = "0.6.0"
-description = "maGATE — MCP・API接続先のセキュリティ審査ツール（ツールポイズニング・ラグプル・シャドーイング・トークン中継・過剰スコープ、OpenAPI対応）"
+version = "0.7.0"
+description = "maGATE — MCP・API接続先のセキュリティ審査ツール（ツールポイズニング・ラグプル・シャドーイング・トークン中継・過剰スコープ、既知脆弱性・実行環境、OpenAPI対応）"
 readme = "README.md"
 requires-python = ">=3.10"
 dependencies = []

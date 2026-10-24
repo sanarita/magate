@@ -12,7 +12,7 @@ Claude・Copilot などの生成AIを外部の MCP サーバ／API に接続し�
 
 - MCPサーバに加え、APIの仕様書（OpenAPI 3.x／Swagger 2.0、Copilot Studioのカスタムコネクタを含む）も審査可能
 - 判定はルールベース（LLMを使わない）。同じ入力なら必ず同じ結果になり、判定理由をたどれる
-- Python 標準ライブラリのみ（追加インストール不要）、自動テスト99件
+- Python 標準ライブラリのみ（追加インストール不要）、自動テスト115件
 - 審査対象のツールやAPIは一度も実行しない（読むのは MCP のツール一覧・OAuth メタデータ・API 仕様書だけ）
 - IPI Guard / skillscan と同じ「パターン採点＋外部抽出器の差し込み口」設計
 
@@ -126,10 +126,38 @@ flowchart TB
 | 5 | ホスティング地域 | ASI04 | LLM02 | 処理地域、再委託先の開示 |
 | 6 | ツール定義の内容 | ASI01, ASI02, ASI04 | LLM01, LLM03 | 上記の5脅威チェック |
 | 7 | 監査ログの有無 | ASI08, ASI10 | LLM06 | 提供元ログ、自社ゲートウェイでの記録 |
+| 8 | 既知脆弱性・実行環境（任意） | ASI04 | LLM03 | 配布パッケージと依存ライブラリの既知脆弱性（OSV）、Node.jsの対応版数、応答ヘッダーのPHP版数 |
+
+8項目めは `--package` / `--lockfile` を指定したとき、または接続先が応答ヘッダーで実行環境の版数を名乗ったときだけ評価します（指定しない従来の審査結果は変わりません）。
 
 総合判定：NG が1つでもあれば **不可**／要対応・未確認があれば **条件付き許可**（条件を列挙）／すべて OK なら **許可**。
 
 > ASI番号との対応は本ツールの設計上の割り当てで、OWASP 公式の対応表ではありません。
+
+### 既知脆弱性・実行環境のチェック（v0.7.0）
+
+2026年10月の Node2Shell（CVE-2026-111497）では、**接続先が細工したレスポンスを返すだけで、接続する側のNode.jsが攻撃され得る**ことが示されました。
+MCPサーバの多くは Node.js で動き、外部から取得したデータを解凍します。そこで、接続先の「定義」に加えて「中身の部品」も審査対象にしました。
+
+| 見るもの | 判定 |
+|---|---|
+| 配布パッケージ・依存ライブラリの既知脆弱性（OSV） | 重大度 CRITICAL／HIGH → NG、それ以外 → 要対応（修正版への更新を条件にする） |
+| 悪用確認済みの脆弱性（`--exploited` の一覧に該当） | 重大度に関係なく NG。CISA KEV 掲載前の情報も手で足せる |
+| `engines.node`（パッケージが宣言する対応版数） | サポート終了・修正版なしの系列を許す → 要対応、宣言なし → 未確認 |
+| 応答ヘッダー `X-Powered-By: PHP/x.y.z` | 修正前・サポート終了の版数 → NG（PHP2Shell）。版数の公開自体も要対応 |
+
+```powershell
+# 配布パッケージ（stdio型のMCPサーバも、コードを実行せずに審査できる）
+uv run python -m magate audit --snapshot snap.json -q 質問票.json --package npm:@playwright/mcp
+# 依存ライブラリまで照会し、悪用確認済みの一覧も使う
+uv run python -m magate audit --snapshot snap.json -q 質問票.json --package npm:mcp-sample@1.2.3 --lockfile package-lock.json --exploited exploited.txt
+```
+
+- 照会結果はスナップショットの `supply_chain` に取得日時つきで保存し、判定はそれだけを見ます。**同じスナップショットなら同じ結果**という性質は変わりません。
+- パッケージのインストールや実行はしません。読むのはnpmレジストリのメタデータとOSVだけです。
+- ランタイムの修正版数は `magate/runtimes.py` の表で管理します（確認日つき）。新しい脆弱性が出たら表を更新します。
+- 応答ヘッダーは自己申告です。版数を隠している接続先を「安全」とはみなしません。
+- 社外の接続先に攻撃用のデータを送って確かめる検査（能動的な検査）は行いません。
 
 ## 使い方
 
@@ -142,6 +170,7 @@ uv run python -m magate audit --snapshot samples\patent_clean.json -q samples\qu
 |---|---|
 | `snapshot --url URL -o snap.json` | 接続先からツール定義とOAuthメタデータを取得して保存 |
 | `audit (--url URL \| --snapshot F) -q 質問票 [--inventory DIR] [--pins DIR]` | 審査してレポート出力（`--json` で機械処理用） |
+| `audit ... --package npm:名前@版 [--lockfile F] [--exploited F]` | 既知脆弱性・実行環境のチェックを加えて審査（v0.7.0） |
 | `pin (--url \| --snapshot) --pins DIR --approved-by 名前` | 承認時点の定義を固定 |
 | `monitor --targets targets.json --pins DIR` | 固定定義との差分監視 |
 | `draft-q --policy 規約.txt --source URL` | 規約から質問票の下書きを作成（要 `ANTHROPIC_API_KEY`） |
@@ -249,6 +278,7 @@ uv run python -m unittest discover -s tests -t .
 ```
 
 模擬 MCP サーバ（Streamable HTTP・SSE応答・ページング・OAuthメタデータ）を立てた取得テストを含みます。
+既知脆弱性のテストは OSV・npmレジストリも模擬サーバで代用し、ネットワークに出ません。
 
 ## 名称について
 

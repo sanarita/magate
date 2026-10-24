@@ -23,6 +23,7 @@ MODULES = [
     "magate/report.py", "magate/web.py", "magate/openapi.py", "magate/catalog.py", "magate/autofill.py",
     "magate/checks/__init__.py", "magate/checks/text.py", "magate/checks/poisoning.py",
     "magate/checks/shadowing.py", "magate/checks/rugpull.py", "magate/checks/auth.py", "magate/checks/scopes.py",
+    "magate/checks/supply_chain.py", "magate/runtimes.py",
 ]
 
 

@@ -34,6 +34,22 @@ def _snapshot(args) -> dict:
     return fetch_http(args.url, token=token, name=args.name)
 
 
+def _snapshot_with_supply(args) -> dict:
+    snap = _snapshot(args)
+    if getattr(args, "package", None) or getattr(args, "lockfile", None):
+        from .supply import fetch_supply_chain
+        snap["supply_chain"] = fetch_supply_chain(args.package, args.lockfile)
+    return snap
+
+
+def _exploited(path):
+    """悪用確認済みの脆弱性ID一覧（1行1件。# 以降はコメント）。CISA KEV 掲載前の情報も手で足せる。"""
+    if not path:
+        return ()
+    with open(path, encoding="utf-8") as f:
+        return tuple(l.split("#", 1)[0].strip() for l in f if l.split("#", 1)[0].strip())
+
+
 def _inventory(path):
     if not path:
         return []
@@ -57,15 +73,17 @@ def _src(p):
     g.add_argument("--openapi", help="API の仕様書（OpenAPI 3.x / Swagger 2.0 の JSON。ファイルパスまたはURL）")
     p.add_argument("--name", help="サーバ名（pinのファイル名に使う）")
     p.add_argument("--token-env", help="アクセストークンを入れた環境変数名（値を直接渡さない）")
+    p.add_argument("--package", help="接続先の配布パッケージ（例：npm:@scope/name@1.2.3、pypi:name==1.2.3）。既知脆弱性を照会する")
+    p.add_argument("--lockfile", help="package-lock.json。依存ライブラリまで既知脆弱性を照会する")
 
 
 def cmd_snapshot(a):
-    _write(a.out, json.dumps(_snapshot(a), ensure_ascii=False, indent=2))
+    _write(a.out, json.dumps(_snapshot_with_supply(a), ensure_ascii=False, indent=2))
     return EXIT_OK
 
 
 def cmd_audit(a):
-    snap = _snapshot(a)
+    snap = _snapshot_with_supply(a)
     q = {}
     if a.questionnaire:
         with open(a.questionnaire, encoding="utf-8") as f:
@@ -75,7 +93,7 @@ def cmd_audit(a):
     if info.get("items"):
         n = sum(1 for x in info["items"] if x["status"] == "filled")
         print(f"情報カード：{(info.get('card') or {}).get('title', '接続先の応答')}（自動入力 {n} 項目）", file=sys.stderr)
-    res = evaluate(snap, q, _inventory(a.inventory), a.pins, autofill=info)
+    res = evaluate(snap, q, _inventory(a.inventory), a.pins, autofill=info, exploited=_exploited(a.exploited))
     _write(a.out, to_json(res) if a.json else to_markdown(res, redact=a.redact))
     print(f"総合判定: {res.verdict}", file=sys.stderr)
     return EXIT_DENY if res.verdict == DENY else EXIT_OK
@@ -162,6 +180,7 @@ def main(argv=None) -> int:
     s.add_argument("--questionnaire", "-q", help="提供元への質問票（回答済みJSON）")
     s.add_argument("--inventory", help="承認済みサーバのスナップショットを置いたフォルダ（シャドーイング検知用）")
     s.add_argument("--pins", help="固定ハッシュの保存フォルダ（ラグプル検知用）")
+    s.add_argument("--exploited", help="悪用確認済みの脆弱性ID一覧（1行1件）。該当すると重大度に関係なく不可")
     s.add_argument("--out", "-o", help="出力先（省略時は標準出力）")
     s.add_argument("--json", action="store_true", help="JSONで出力")
     s.add_argument("--redact", action="store_true",
